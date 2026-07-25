@@ -127,9 +127,9 @@
   /* Shared Pixel Arcade rail: keep this block identical in every game. */
   .game-rail{position:fixed;left:14px;top:50%;transform:translateY(-50%);width:122px;padding:10px;z-index:5;color:#fff7d6;background:#2f185c;border:4px solid #f7d154;box-shadow:7px 8px 0 #140a2b;text-align:center;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
   .rail-brand{display:block;color:#fff7d6;text-decoration:none;font-size:12px;font-weight:900;letter-spacing:1px;margin:4px 0 12px}.rail-logo{position:relative;display:block;width:34px;height:24px;margin:0 auto 7px;background:#5730a8;border:4px solid #151515;box-shadow:inset 9px 0 #ff7a59,inset -9px 0 #8bc34a}.rail-logo:after{content:'';position:absolute;left:11px;top:6px;width:4px;height:4px;background:#f7d154;box-shadow:-5px 0 #f7d154,5px 0 #f7d154,0 -5px #f7d154,0 5px #f7d154}
-  .game-entry{position:relative}.game-tile{display:block;width:100%;min-height:58px;margin:7px 0;padding:8px 3px;border:3px solid #140a2b;color:#fff7d6;background:#5730a8;font:900 10px ui-monospace,SFMono-Regular,Consolas,monospace;text-decoration:none;cursor:pointer}.game-tile.flappy{color:#2f185c;background:#ff7a59}.game-tile.zombie{color:#142414;background:#8bc34a}.game-tile.active{border-color:#fff7d6;box-shadow:inset 0 -5px 0 rgba(20,10,43,.28)}.game-tile.available:hover,.game-tile.available:focus-visible{filter:brightness(1.12);transform:translate(-1px,-1px)}.game-tile small{display:block;margin-top:5px;font-size:8px}.game-tile.future{opacity:.62;color:#fff7d6;background:#3b2871}
-  .open-tab{position:absolute;right:4px;top:4px;width:22px;height:22px;line-height:18px;color:#fff;background:#21123f;border:2px solid #f7d154;text-decoration:none;font-size:12px}.open-tab:hover,.open-tab:focus-visible{color:#21123f;background:#f7d154}
-  .rail-audio{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:10px 0 8px;padding-top:9px;border-top:2px solid #6f55a7}.audio-toggle{min-width:0;padding:6px 2px;color:#fff7d6;background:#21123f;border:2px solid #f7d154;font:900 8px ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer}.audio-toggle small{display:block;margin-top:3px;color:#9fe36b;font-size:7px}.audio-toggle[data-state="off"]{color:#9d91ba;border-color:#6f628e}.audio-toggle[data-state="off"] small{color:#ff7a59}.audio-toggle:hover,.audio-toggle:focus-visible{background:#5730a8}
+  .game-entry{position:relative}.game-tile{display:block;width:100%;min-height:58px;margin:7px 0;padding:8px 3px;border:3px solid #140a2b;color:#fff7d6;background:#5730a8;font:900 10px ui-monospace,SFMono-Regular,Consolas,monospace;text-decoration:none;cursor:pointer}.game-tile.flappy{color:#2f185c;background:#ff7a59}.game-tile.zombie{color:#142414;background:#8bc34a}.game-tile.active{border-color:#fff7d6;box-shadow:inset 0 -5px 0 rgba(20,10,43,.28)}.game-tile.available:hover,.game-tile.available:focus-visible{filter:brightness(1.12);transform:translate(-1px,-1px)}.game-tile small{display:block;margin-top:5px;font-size:9px}.game-tile.future{opacity:.62;color:#fff7d6;background:#3b2871}
+  .open-tab{position:absolute;right:-8px;top:-4px;width:22px;height:22px;line-height:18px;color:#fff;background:#21123f;border:2px solid #f7d154;text-decoration:none;font-size:12px}.open-tab:hover,.open-tab:focus-visible{color:#21123f;background:#f7d154}
+  .rail-audio{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:10px 0 8px;padding-top:9px;border-top:2px solid #6f55a7}.audio-toggle{min-width:0;padding:6px 2px;color:#fff7d6;background:#21123f;border:2px solid #f7d154;font:900 9px ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer}.audio-toggle small{display:block;margin-top:3px;color:#9fe36b;font-size:8px}.audio-toggle[data-state="off"]{color:#9d91ba;border-color:#6f628e}.audio-toggle[data-state="off"] small{color:#ff7a59}.audio-toggle:hover,.audio-toggle:focus-visible{background:#5730a8}
   @media(max-width:760px){body{padding-left:68px}.game-rail{left:4px;width:62px;padding:5px}.rail-brand{font-size:8px}.rail-logo{width:28px;height:20px}.game-tile{min-height:44px;font-size:7px}.game-tile small{display:none}.open-tab{width:18px;height:18px;line-height:14px;font-size:9px}.rail-audio{grid-template-columns:1fr}.audio-toggle{font-size:7px;padding:4px 1px}.audio-toggle small{display:none}canvas{max-width:calc(100vw - 90px)}}
 </style>
 </head>
@@ -594,10 +594,11 @@ class Bird {
     context.fill();
     context.restore();
   }
-  drawGhost(context, y) {
+  drawGhost(context, y, tilt) {
     context.save();
     context.globalAlpha = 0.4;
     context.translate(Math.round(this.x), Math.round(y));
+    context.rotate(tilt || 0);
     context.lineJoin = 'round';
 
     context.save();
@@ -979,6 +980,9 @@ class MenuState {
     context.fillStyle = '#102f3a';
     context.font = 'bold 11px "PixelArcade", monospace';
     context.fillText('★  8-BIT SKY RUN  ★', WIDTH / 2, 56);
+    context.fillStyle = '#D6F5FF';
+    context.font = 'bold 6px "PixelArcade", monospace';
+    context.fillText('DECORATIVE SUBTITLE • NOT A GAME MODE', WIDTH / 2, 73);
 
     context.font = '900 43px "PixelArcade", monospace';
     context.fillStyle = '#102f3a';
@@ -1013,7 +1017,7 @@ class MenuState {
     context.fillRect(190, 279, 180, 106);
     context.fillStyle = '#FFE66D';
     context.font = 'bold 14px "PixelArcade", monospace';
-    context.fillText('★ TOP PILOTS ★', 280, 299);
+    context.fillText('★ TOP PLAYERS ★', 280, 299);
     context.textAlign = 'left';
     context.font = 'bold 12px "PixelArcade", monospace';
     const boardCount = Math.min(3, this.game.leaderboard.length);
@@ -1027,7 +1031,8 @@ class MenuState {
     }
     if (boardCount === 0) {
       context.fillStyle = '#D6F5FF';
-      context.fillText('NO SCORES YET', 216, 344);
+      context.textAlign = 'center';
+      context.fillText('NO SCORES YET', 280, 344);
     }
     context.textAlign = 'center';
 
@@ -1311,6 +1316,7 @@ class GameLoop {
 class Game {
   constructor() {
     this.fontReady = false;
+    this.ctx = ctx;
     this.storage = new Storage('flappyCanvas.');
     this.sound = new SoundManager(this.storage);
     this.syncAudioControls = bindAudioControls(this.sound);
@@ -1512,6 +1518,12 @@ class Game {
     if (index < 0 || index >= this.previousGhostCount) return null;
     return this.previousGhost[index];
   }
+  getGhostTilt() {
+    const index = Math.floor(this.ghostPlaybackTime * 30);
+    if (index < 1 || index >= this.previousGhostCount) return 0;
+    const movement = this.previousGhost[index] - this.previousGhost[index - 1];
+    return clamp(movement * 0.035, -0.45, 0.7);
+  }
   returnToMenu() {
     this.bird.reset();
     this.pipes.reset();
@@ -1579,7 +1591,7 @@ class Game {
     this.background.drawGround(context);
     if (this.machine.name === 'PLAYING' || this.machine.name === 'PAUSED' || this.machine.name === 'COUNTDOWN') {
       const ghostY = this.getGhostY();
-      if (ghostY !== null) this.bird.drawGhost(context, ghostY);
+      if (ghostY !== null) this.bird.drawGhost(context, ghostY, this.getGhostTilt());
     }
     this.bird.draw(context);
   }
