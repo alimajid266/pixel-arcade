@@ -13,7 +13,7 @@ assert 'Music and sound-effect preferences are controlled independently inside e
 assert 'transform:translate(-50%,-50%)' in home.replace(' ', '')
 for source in (flappy, zombie):
     compact = source.replace(' ', '')
-    assert 'right:-8px;top:-4px' in compact
+    assert 'right:-26px;top:-4px' in compact
     assert '.game-tilesmall{display:block;margin-top:5px;font-size:9px}' in compact
 
 options = Options()
@@ -45,8 +45,8 @@ try:
       let guard = 0;
       while (burrower.underground && guard++ < 1000) burrower.update(.1);
 
-      const direct = new Zombie('walker', 1);
-      const nearby = new Zombie('walker', 1);
+      const direct = new Zombie('armored', 4);
+      const nearby = new Zombie('armored', 4);
       direct.maxHp = direct.hp = 1000;
       nearby.maxHp = nearby.hp = 1000;
       direct.x = direct.drawX = 300; direct.y = direct.drawY = 300;
@@ -57,10 +57,11 @@ try:
 
       const a = MENU_LAYOUT.arsenal, m = MENU_LAYOUT.map;
       const layoutsOverlap = a.x < m.x + m.w && a.x + a.w > m.x && a.y < m.y + m.h && a.y + a.h > m.y;
-      const start = MENU_LAYOUT.start || {y:515, h:24};
-      const instructions = MENU_LAYOUT.instructions || {y:531, h:38};
+      const start = MENU_LAYOUT.start;
+      const instructions = MENU_LAYOUT.instructions, sound = MENU_LAYOUT.sound;
       const menuSpacing = m.y + m.h < start.y &&
-        start.y + start.h < instructions.y;
+        instructions.y + instructions.h < MENU_LAYOUT.arsenal.y &&
+        sound.y === instructions.y && sound.x > instructions.x + instructions.w;
       return {
         speeds:[wave1.speed,wave2.speed,wave8.speed,wave12.speed],
         toxicHealing:toxic.hp-toxicBefore,
@@ -77,8 +78,8 @@ try:
         errors:window.__errors.slice()
       };
     """)
-    assert result['speeds'][0] == 58 and result['speeds'][1] == 58, result
-    assert 58 < result['speeds'][2] <= 65 and 58 < result['speeds'][3] <= 70, result
+    assert 60 <= result['speeds'][0] <= 64 and result['speeds'][1] > result['speeds'][0], result
+    assert 68 < result['speeds'][2] <= 74 and 72 < result['speeds'][3] <= 82, result
     assert 12 <= result['toxicHealing'] <= 16 and 'FOCUS FIRE' in result['toxicManual'], result
     assert result['burrowStart'][0] and .25 <= result['burrowStart'][1] <= .45, result
     assert result['burrowEnded'] and result['burrowManual'], result
