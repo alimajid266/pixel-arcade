@@ -976,17 +976,6 @@ class MenuState {
     context.save();
     context.textAlign = 'center';
 
-    context.fillStyle = '#102f3a';
-    context.fillRect(112, 39, 176, 25);
-    context.fillStyle = '#F7D154';
-    context.fillRect(116, 43, 168, 17);
-    context.fillStyle = '#102f3a';
-    context.font = 'bold 11px "PixelArcade", monospace';
-    context.fillText('★  8-BIT SKY RUN  ★', WIDTH / 2, 56);
-    context.fillStyle = '#D6F5FF';
-    context.font = 'bold 6px "PixelArcade", monospace';
-    context.fillText('DECORATIVE SUBTITLE • NOT A GAME MODE', WIDTH / 2, 73);
-
     context.font = '900 43px "PixelArcade", monospace';
     context.fillStyle = '#102f3a';
     context.fillText('FLAPPY', WIDTH / 2 + 4, 113);
@@ -1049,18 +1038,17 @@ class MenuState {
     context.fillText('▶ PRESS SPACE / TAP ◀', WIDTH / 2, 435);
     context.globalAlpha = 1;
     context.fillStyle = '#102f3a';
-    context.fillRect(55, 460, 290, 90);
+    context.fillRect(55, 460, 290, 96);
     context.fillStyle = '#6C3FC5';
-    context.fillRect(60, 465, 280, 80);
+    context.fillRect(60, 465, 280, 86);
     context.fillStyle = '#FF7A59';
-    context.fillRect(66, 499, 268, 3);
+    context.fillRect(66, 491, 268, 3);
+    context.fillRect(66, 520, 268, 3);
     context.fillStyle = '#FFF7D6';
-    context.font = 'bold 11px "PixelArcade", monospace';
-    context.fillText('< BIOME: ' + this.game.biome + ' >', WIDTH / 2, 487);
-    context.fillText('< WEATHER: ' + this.game.weatherMode + ' >', WIDTH / 2, 522);
-    context.fillStyle = '#D8C7FF';
-    context.font = 'bold 6px "PixelArcade", monospace';
-    context.fillText('ARROWS: BIOME  /  W: WEATHER', WIDTH / 2, 540);
+    context.font = 'bold 10px "PixelArcade", monospace';
+    context.fillText('< BIOME: ' + this.game.biome + ' >', WIDTH / 2, 484);
+    context.fillText('< WEATHER: ' + this.game.weatherMode + ' >', WIDTH / 2, 513);
+    context.fillText('< GHOST: ' + (this.game.ghostEnabled ? 'ON' : 'OFF') + ' >', WIDTH / 2, 542);
     context.restore();
     this.game.drawMute(context);
   }
@@ -1341,6 +1329,7 @@ class Game {
     this.weatherModes = ['CLEAR', 'RAIN'];
     this.weatherMode = this.storage.getString('weather', 'CLEAR');
     if (this.weatherModes.indexOf(this.weatherMode) === -1) this.weatherMode = 'CLEAR';
+    this.ghostEnabled = this.storage.getBoolean('ghostEnabled', true);
     this.weather = new WeatherSystem();
     this.weather.setMode(this.weatherMode);
     this.bird = new Bird();
@@ -1410,12 +1399,16 @@ class Game {
         return true;
       }
     }
-    if (this.machine.name === 'MENU' && y >= 460 && y <= 500) {
+    if (this.machine.name === 'MENU' && x >= 55 && x <= 345 && y >= 460 && y <= 491) {
       this.cycleBiome(x < WIDTH / 2 ? -1 : 1);
       return true;
     }
-    if (this.machine.name === 'MENU' && y > 500 && y <= 550) {
+    if (this.machine.name === 'MENU' && x >= 55 && x <= 345 && y > 491 && y <= 520) {
       this.cycleWeather(x < WIDTH / 2 ? -1 : 1);
+      return true;
+    }
+    if (this.machine.name === 'MENU' && x >= 55 && x <= 345 && y > 520 && y <= 556) {
+      this.toggleGhost();
       return true;
     }
     const layout = this.gameOver.layout;
@@ -1446,6 +1439,7 @@ class Game {
       this.cycleWeather(event.code === 'ArrowUp' ? -1 : 1);
       return true;
     }
+
     if (event.code === 'Backspace') {
       this.username = this.username.slice(0, -1);
       this.storage.setString('username', this.username);
@@ -1479,6 +1473,10 @@ class Game {
     this.weatherMode = this.weatherModes[index];
     this.weather.setMode(this.weatherMode);
     this.storage.setString('weather', this.weatherMode);
+  }
+  toggleGhost() {
+    this.ghostEnabled = !this.ghostEnabled;
+    this.storage.setBoolean('ghostEnabled', this.ghostEnabled);
   }
   recordScore() {
     if (this.score <= 0) return;
@@ -1594,7 +1592,7 @@ class Game {
     if (showPipes) this.pipes.draw(context);
     this.weather.draw(context);
     this.background.drawGround(context);
-    if (this.machine.name === 'PLAYING' || this.machine.name === 'PAUSED' || this.machine.name === 'COUNTDOWN') {
+    if (this.ghostEnabled && (this.machine.name === 'PLAYING' || this.machine.name === 'PAUSED' || this.machine.name === 'COUNTDOWN')) {
       const ghostY = this.getGhostY();
       if (ghostY !== null) this.bird.drawGhost(context, ghostY, this.getGhostTilt());
     }

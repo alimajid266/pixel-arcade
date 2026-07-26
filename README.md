@@ -47,7 +47,7 @@ It includes:
 - clear or rainy weather;
 - pause and three-second resume countdown;
 - local high score and local top-player board;
-- a translucent replay ghost of the previous run;
+- an optional translucent replay ghost of the previous run;
 - independent music and sound-effect controls.
 
 ### Zombie Defense: Last Outpost
@@ -148,6 +148,7 @@ It includes:
 | Return to menu | Enter from Game Over, or the menu control in Pause/Game Over |
 | Change biome | Left/Right arrows on the menu |
 | Change weather | `W` on the menu |
+| Toggle previous-run ghost | Ghost row on the menu |
 | Toggle all audio | `M` or the Canvas mute control |
 | Edit player name | Letter/number keys on the menu; Backspace deletes |
 
@@ -229,6 +230,7 @@ Flappy Canvas uses the `flappyCanvas.` prefix for:
 - player name;
 - local leaderboard;
 - biome and weather;
+- previous-run ghost visibility;
 - music/SFX preferences.
 
 Zombie Defense stores:
@@ -274,7 +276,7 @@ Each pipe snapshots its gap height when created, so already-visible pipes do not
 - Circle-versus-rectangle collision is used for pipes.
 - Background speed follows pipe speed, reinforcing the increasing pace.
 - Pause freezes gameplay; resuming uses a `3 → 2 → 1` countdown.
-- The previous run is sampled into fixed typed arrays and rendered as a translucent ghost.
+- The previous run is sampled into fixed typed arrays and, when enabled, rendered as a translucent ghost. Ghost visibility is stored locally and defaults to on.
 - Biome/weather choices are cosmetic and do not change collision or difficulty.
 
 ---
@@ -638,7 +640,7 @@ The regression suite covers, among other behavior:
 
 - launcher and same-origin navigation;
 - Canvas runtime errors and initial states;
-- Flappy scoring, pacing, ghost orientation, pause, and menu geometry;
+- Flappy scoring, pacing, ghost orientation/visibility, pause, and menu geometry;
 - tower placement rejection and `2×1` footprints;
 - upgrades, selling, compatibility, and unaffordable previews;
 - overlapping-wave ownership and settlement;
