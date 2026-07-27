@@ -75,8 +75,8 @@ It includes:
 - One static launcher at `/`.
 - Two playable games at `/flappy/` and `/zombie-defense/`.
 - Same-origin navigation and a shared in-game arcade rail.
-- Responsive desktop and landscape-mobile presentation.
-- A portrait orientation gate at widths up to 736 px where the fixed-resolution game UI would be too small to use safely.
+- Responsive desktop and mobile presentation, including portrait play for Flappy Canvas.
+- A Zombie Defense portrait orientation gate at widths up to 736 px where its wider tactical UI would be too small to use safely.
 - Local browser persistence for preferences and records.
 - Static deployment through one GitHub repository and one Vercel project.
 
@@ -134,10 +134,10 @@ It includes:
 
 ### Shared arcade controls
 
-- Use the left arcade rail to switch games or return to Pixel Arcade.
+- Use the arcade rail—left-side on desktop/landscape and top-side for portrait Flappy—to switch games or return to Pixel Arcade.
 - The `↗` control opens a game in a new tab.
 - Music and sound effects can be enabled independently.
-- On narrow portrait screens, rotate the device to landscape.
+- Flappy Canvas supports narrow portrait screens; Zombie Defense requires landscape at widths up to 736 px.
 
 ### Flappy Canvas controls
 
@@ -218,7 +218,9 @@ The games preserve fixed logical worlds while scaling their displayed Canvas:
 
 Zombie Defense uses a `20 × 12` battlefield grid with `40px` logical cells. Its top `480px` is the build grid, `500px` is the playable world area, and the remaining space is the HUD.
 
-At narrow portrait widths (`≤736px`), the game DOM and global gameplay inputs are gated and a landscape-required notice is shown. This is an intentional scope decision: shrinking the fixed Canvas further made internal text and controls too small even when geometry did not overlap.
+At narrow portrait widths (`≤736px`), Flappy replaces the side rail with a compact top toolbar and displays its `400 × 600` Canvas at nearly the full phone width. Zombie Defense keeps its landscape-required gate because its wider battlefield, shop, and HUD become too small to use safely when uniformly reduced to portrait width.
+
+On mobile landscape screens (`≤1000px` wide and `≤500px` high), Zombie Defense uses a compact 62px arcade rail beside a nearly full-height Canvas. The decorative Future tile and new-tab controls are hidden, the shell gap is reduced to 8px, visible rail actions retain at least 40×44px touch targets, and important menu/HUD/instruction copy uses larger mobile-only Canvas fonts. Dense target/manual wording is abbreviated only in this mode so it remains inside its panel; desktop retains the full wording and layout.
 
 ### Local storage
 
@@ -576,9 +578,12 @@ pixel-arcade/
 ├── tests/
 │   ├── verify_source_contract.py      # Same-origin/source invariants
 │   ├── verify_flappy_feedback.py      # Flappy behavior and rendering checks
+│   ├── verify_flappy_mobile.py        # Exact-viewport portrait/touch checks
 │   ├── verify_gameplay_feedback.py    # Cross-game gameplay feedback checks
+│   ├── verify_zombie_mobile.py        # Exact landscape size/font/space checks
 │   ├── verify_zombie_strategy.py      # Strategy, accounting, input, responsive tests
 │   ├── verify_combined_arcade.py      # Launcher/game integration
+│   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks
 │   └── verify_production.py           # Production browser smoke test
 └── README.md
 ```
@@ -625,9 +630,12 @@ In another terminal:
 ```bash
 .venv/bin/python tests/verify_source_contract.py
 .venv/bin/python tests/verify_flappy_feedback.py
+.venv/bin/python tests/verify_flappy_mobile.py
 .venv/bin/python tests/verify_gameplay_feedback.py
+.venv/bin/python tests/verify_zombie_mobile.py
 .venv/bin/python tests/verify_zombie_strategy.py
 .venv/bin/python tests/verify_combined_arcade.py
+.venv/bin/python tests/verify_latest_feedback.py
 ```
 
 Production smoke test:
@@ -641,12 +649,14 @@ The regression suite covers, among other behavior:
 - launcher and same-origin navigation;
 - Canvas runtime errors and initial states;
 - Flappy scoring, pacing, ghost orientation/visibility, pause, and menu geometry;
+- exact `360×800`, `390×844`, and `430×932` Flappy portrait geometry, touch mapping, readable scale, and toolbar target sizes;
+- exact `667×375`, `844×414`, and `932×430` Zombie landscape scale, text bounds, compact-rail spacing, and touch-target sizes;
 - tower placement rejection and `2×1` footprints;
 - upgrades, selling, compatibility, and unaffordable previews;
 - overlapping-wave ownership and settlement;
 - bounty/fine ordering, lethal escapes, final-wave boss flow, and terminal cleanup;
 - map preview and utility-control geometry;
-- sidebar separation, Canvas aspect ratio, scaled input, and portrait gates.
+- sidebar/toolbar separation, Canvas aspect ratio, scaled input, Flappy portrait play, and the Zombie portrait gate.
 
 ---
 

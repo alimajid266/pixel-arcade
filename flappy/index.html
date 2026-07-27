@@ -130,13 +130,18 @@
   .game-entry{position:relative}.game-tile{display:block;width:100%;min-height:58px;margin:7px 0;padding:8px 3px;border:3px solid #140a2b;color:#fff7d6;background:#5730a8;font:900 10px ui-monospace,SFMono-Regular,Consolas,monospace;text-decoration:none;cursor:pointer}.game-tile.flappy{color:#2f185c;background:#ff7a59}.game-tile.zombie{color:#142414;background:#8bc34a}.game-tile.active{border-color:#fff7d6;box-shadow:inset 0 -5px 0 rgba(20,10,43,.28)}.game-tile.available:hover,.game-tile.available:focus-visible{filter:brightness(1.12);transform:translate(-1px,-1px)}.game-tile small{display:block;margin-top:5px;font-size:9px}.game-tile.future{opacity:.62;color:#fff7d6;background:#3b2871}
   .open-tab{position:absolute;right:-26px;top:-4px;width:22px;height:22px;line-height:18px;color:#fff;background:#21123f;border:2px solid #f7d154;text-decoration:none;font-size:12px}.open-tab:hover,.open-tab:focus-visible{color:#21123f;background:#f7d154}
   .rail-audio{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:10px 0 8px;padding-top:9px;border-top:2px solid #6f55a7}.audio-toggle{min-width:0;padding:6px 2px;color:#fff7d6;background:#21123f;border:2px solid #f7d154;font:900 9px ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer}.audio-toggle small{display:block;margin-top:3px;color:#9fe36b;font-size:8px}.audio-toggle[data-state="off"]{color:#9d91ba;border-color:#6f628e}.audio-toggle[data-state="off"] small{color:#ff7a59}.audio-toggle:hover,.audio-toggle:focus-visible{background:#5730a8}
-  .rotate-notice{display:none}
   @media(max-width:760px){body{padding-left:74px}.game-rail{left:4px;width:62px;padding:5px}.rail-brand{font-size:8px}.rail-logo{width:28px;height:20px}.game-tile{min-height:44px;font-size:7px}.game-tile small{display:none}.open-tab{right:-18px;width:18px;height:18px;line-height:14px;font-size:9px}.rail-audio{grid-template-columns:1fr}.audio-toggle{font-size:7px;padding:4px 1px}.audio-toggle small{display:none}canvas{max-width:calc(100vw - 96px)}}
-  @media(max-width:736px) and (orientation:portrait){body{padding-left:0}.game-rail,#shell,#game-container,body>canvas{display:none}.rotate-notice{display:flex;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:32px;color:#fff7d6;background:#140a2b;border:8px solid #f7d154;text-align:center;font:900 16px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1px}}
+  @media(max-width:736px) and (orientation:portrait){
+    body{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:76px 0 8px;overflow:hidden}
+    .game-rail{display:flex;align-items:center;gap:5px;left:4px;right:4px;top:4px;width:auto;height:60px;padding:4px;transform:none;box-shadow:4px 5px 0 #140a2b}
+    .rail-brand{display:flex;flex:0 0 40px;min-height:46px;align-items:center;justify-content:center;margin:0;font-size:7px;line-height:1.25}.rail-logo{display:none}
+    .game-entry{flex:1 1 0;min-width:0}.game-tile{min-height:46px;margin:0;padding:5px 2px;font-size:7px}.game-tile small,.open-tab,.game-tile.future{display:none}
+    .rail-audio{display:grid;flex:0 0 88px;grid-template-columns:1fr 1fr;gap:4px;margin:0;padding:0;border:0}.audio-toggle{min-height:46px;padding:3px 1px;font-size:7px}.audio-toggle small{display:block;font-size:7px}
+    canvas{width:min(calc(100vw - 16px),calc((100vh - 88px)*2/3));height:auto;max-width:none;max-height:calc(100vh - 88px);box-shadow:6px 8px 0 #071c23,0 14px 36px rgba(0,0,0,.42)}
+  }
 </style>
 </head>
 <body>
-  <div class="rotate-notice" role="status">ROTATE DEVICE<br>LANDSCAPE REQUIRED TO PLAY</div>
   <aside class="game-rail" aria-label="Game library">
   <a class="rail-brand" href="/" aria-label="Pixel Arcade home"><span class="rail-logo"></span>PIXEL<br>ARCADE</a>
   <div class="game-entry">
@@ -1265,7 +1270,6 @@ class InputManager {
     canvas.addEventListener('touchstart', this.onPointer, { passive: false });
   }
   onKeyDown(event) {
-    if (matchMedia('(max-width:736px) and (orientation:portrait)').matches) return;
     if (event.code === 'Space') {
       event.preventDefault();
       this.flapHandler();
@@ -1277,7 +1281,6 @@ class InputManager {
     }
   }
   onPointer(event) {
-    if (matchMedia('(max-width:736px) and (orientation:portrait)').matches) return;
     event.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const source = event.touches ? event.touches[0] : event;

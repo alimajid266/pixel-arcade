@@ -175,17 +175,15 @@ try:
         """))
     assert all(not item['tileOverlap'] and not item['canvasOverlap'] and item['scaleDiff']<.02 for page in mobile for item in page),mobile
     print('MOBILE SIDEBAR GEOMETRY PASS:',mobile)
-    portraits=[]
-    for path in ('/zombie-defense/','/flappy/'):
-      d.set_window_size(390,844);d.get('http://127.0.0.1:8770'+path);time.sleep(.4)
-      portraits.append(d.execute_script("""
-        const n=document.querySelector('.rotate-notice'),s=document.getElementById('shell')||document.querySelector('body>canvas');
-        const before=window.__game&&window.__game.snapshot?window.__game.snapshot().state:null;
-        window.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));
-        const after=window.__game&&window.__game.snapshot?window.__game.snapshot().state:null;
-        return {exists:!!n,shown:!!n&&getComputedStyle(n).display!=='none',font:n?parseFloat(getComputedStyle(n).fontSize):0,shellHidden:getComputedStyle(s).display==='none',keyboardBlocked:before===after,errors:window.__errors?window.__errors.slice():[]};
-      """))
-    assert all(p=={'exists':True,'shown':True,'font':16,'shellHidden':True,'keyboardBlocked':True,'errors':[]} for p in portraits),portraits
-    print('PORTRAIT ORIENTATION GATE PASS:',portraits)
+    d.set_window_size(390,844);d.get('http://127.0.0.1:8770/zombie-defense/');time.sleep(.4)
+    portrait=d.execute_script("""
+      const n=document.querySelector('.rotate-notice'),s=document.getElementById('shell');
+      const before=window.__game.snapshot().state;
+      window.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));
+      const after=window.__game.snapshot().state;
+      return {exists:!!n,shown:!!n&&getComputedStyle(n).display!=='none',font:n?parseFloat(getComputedStyle(n).fontSize):0,shellHidden:getComputedStyle(s).display==='none',keyboardBlocked:before===after,errors:window.__errors?window.__errors.slice():[]};
+    """)
+    assert portrait=={'exists':True,'shown':True,'font':16,'shellHidden':True,'keyboardBlocked':True,'errors':[]},portrait
+    print('ZOMBIE PORTRAIT ORIENTATION GATE PASS:',portrait)
 finally:
     d.quit()
