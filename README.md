@@ -220,7 +220,7 @@ Zombie Defense uses a `20 × 12` battlefield grid with `40px` logical cells. Its
 
 At narrow portrait widths (`≤736px`), Flappy replaces the side rail with a compact top toolbar and displays its `400 × 600` Canvas at nearly the full phone width. Zombie Defense keeps its landscape-required gate because its wider battlefield, shop, and HUD become too small to use safely when uniformly reduced to portrait width.
 
-On mobile landscape screens (`≤1000px` wide and `≤500px` high), Zombie Defense uses a compact 62px arcade rail beside a nearly full-height Canvas. The decorative Future tile and new-tab controls are hidden, the shell gap is reduced to 8px, visible rail actions retain at least 40×44px touch targets, and important menu/HUD/instruction copy uses larger mobile-only Canvas fonts. Dense target/manual wording is abbreviated only in this mode so it remains inside its panel; desktop retains the full wording and layout.
+On mobile landscape screens (`≤1000px` wide and `≤500px` high), Zombie Defense hides the arcade rail and expands the Canvas to within 4px of every viewport edge. Horizontal and vertical CSS scales are intentionally independent in this mode so the fixed `800 × 650` game can use the phone’s full wide screen; pointer conversion continues to map each axis back to logical game coordinates. Mobile Canvas fonts have a 16px logical minimum, and dense target/manual wording is abbreviated so it remains inside its panel. Desktop retains the proportional Canvas, full arcade rail, and full wording.
 
 ### Local storage
 
@@ -397,6 +397,8 @@ penalty = min(current money, escaped enemies × 6 + lives lost × 4)
 Each enemy owns the number of the wave that spawned it. Every wave has an independent settlement record containing remaining enemies, escapes, lost lives, boss state, and settlement state. This is necessary because the player may start the next wave while earlier enemies remain alive.
 
 Settlement is idempotent: rewards, penalties, victory, and defeat cannot be applied twice. Killed-enemy bounty is credited before settlement fines. Terminal transitions stop the active enemy loop, clamp lives to zero, and clear remaining enemies/projectiles.
+
+Victory occurs after every Wave 12 enemy and any overlapping earlier-wave enemies are resolved while the player still has at least one life. Escapes during Wave 12 still deduct lives, mark the wave failed, and apply the normal penalty, but they do not independently force defeat. Game Over occurs when lives reach zero.
 
 ---
 
@@ -582,6 +584,7 @@ pixel-arcade/
 │   ├── verify_gameplay_feedback.py    # Cross-game gameplay feedback checks
 │   ├── verify_zombie_mobile.py        # Exact landscape size/font/space checks
 │   ├── verify_zombie_strategy.py      # Strategy, accounting, input, responsive tests
+│   ├── verify_zombie_escape.py        # Real route exit and 12-wave outcome checks
 │   ├── verify_combined_arcade.py      # Launcher/game integration
 │   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks
 │   └── verify_production.py           # Production browser smoke test
@@ -634,6 +637,7 @@ In another terminal:
 .venv/bin/python tests/verify_gameplay_feedback.py
 .venv/bin/python tests/verify_zombie_mobile.py
 .venv/bin/python tests/verify_zombie_strategy.py
+.venv/bin/python tests/verify_zombie_escape.py
 .venv/bin/python tests/verify_combined_arcade.py
 .venv/bin/python tests/verify_latest_feedback.py
 ```
@@ -650,7 +654,8 @@ The regression suite covers, among other behavior:
 - Canvas runtime errors and initial states;
 - Flappy scoring, pacing, ghost orientation/visibility, pause, and menu geometry;
 - exact `360×800`, `390×844`, and `430×932` Flappy portrait geometry, touch mapping, readable scale, and toolbar target sizes;
-- exact `667×375`, `844×414`, and `932×430` Zombie landscape scale, text bounds, compact-rail spacing, and touch-target sizes;
+- exact `667×375`, `844×414`, and `932×430` Zombie full-window landscape scale, text bounds, and non-uniform pointer mapping;
+- real Zombie route traversal through the off-grid exit, early- and final-wave escapes with surviving-lives victory, and lethal boss-escape defeat;
 - tower placement rejection and `2×1` footprints;
 - upgrades, selling, compatibility, and unaffordable previews;
 - overlapping-wave ownership and settlement;

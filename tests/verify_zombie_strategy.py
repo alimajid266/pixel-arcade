@@ -71,7 +71,7 @@ try:
       const failedOld={wave:11,remaining:1,regularRemaining:1,escaped:2,livesLost:2,bossSpawned:false,settled:false};
       const failedFinal={wave:12,remaining:0,regularRemaining:0,escaped:1,livesLost:1,bossSpawned:true,settled:false};
       __game.wave.records={11:failedOld,12:failedFinal};__game.wave.settle(failedFinal);
-      const finalFailure={money:__game.money,failed:__game.failedWaves,oldSettled:failedOld.settled,finalSettled:failedFinal.settled,state:__game.state.current};
+      const finalEscapePending={money:__game.money,failed:__game.failedWaves,oldSettled:failedOld.settled,finalSettled:failedFinal.settled,state:__game.state.current};
       __game.startGame();__game.money=0;__game.wave.wave=1;__game.wave.active=true;
       const bountyRecord={wave:1,remaining:1,regularRemaining:1,escaped:1,livesLost:1,bossSpawned:false,settled:false};
       __game.wave.records={1:bountyRecord};const bountyWalker=new __internals.Zombie('walker',1);bountyWalker.dead=true;__game.enemies=[bountyWalker];__game.updatePlaying(0);
@@ -80,7 +80,7 @@ try:
       const bountyOld={wave:11,remaining:1,regularRemaining:1,escaped:2,livesLost:2,bossSpawned:false,settled:false};
       const bountyFinal={wave:12,remaining:1,regularRemaining:0,escaped:1,livesLost:1,bossSpawned:true,settled:false};
       __game.wave.records={11:bountyOld,12:bountyFinal};const bountyBoss=new __internals.Zombie('boss',12);bountyBoss.dead=true;__game.enemies=[bountyBoss];__game.updatePlaying(0);
-      const finalBountyFine={money:__game.money,reward:bountyBoss.reward,failed:__game.failedWaves,oldSettled:bountyOld.settled,finalSettled:bountyFinal.settled,state:__game.state.current};
+      const finalBountyPending={money:__game.money,reward:bountyBoss.reward,failed:__game.failedWaves,oldSettled:bountyOld.settled,finalSettled:bountyFinal.settled,state:__game.state.current};
       __game.startGame();__game.money=0;__game.lives=8;__game.wave.wave=12;__game.wave.active=true;
       const sameFrameOld={wave:11,remaining:1,regularRemaining:1,escaped:0,livesLost:0,bossSpawned:false,settled:false};
       const sameFrameFinal={wave:12,remaining:1,regularRemaining:0,escaped:0,livesLost:0,bossSpawned:true,settled:false};
@@ -90,17 +90,17 @@ try:
       const lethalBossRecord={wave:12,remaining:1,regularRemaining:0,escaped:0,livesLost:0,bossSpawned:true,settled:false};
       __game.wave.records={12:lethalBossRecord};const lethalBoss=new __internals.Zombie('boss',12);lethalBoss.segment=999;__game.enemies=[lethalBoss];__game.updatePlaying(0);
       const lethalBossEscape={lives:__game.lives,money:__game.money,state:__game.state.current,enemies:__game.enemies.length,settled:lethalBossRecord.settled};
-      return {afterWave1,afterWave2,finalGate:{delayed,victory},lethal,bossFlow,finalFailure,bountyFine,finalBountyFine,terminalLoop,lethalBossEscape,errors:__errors.slice()};
+      return {afterWave1,afterWave2,finalGate:{delayed,victory},lethal,bossFlow,finalEscapePending,bountyFine,finalBountyPending,terminalLoop,lethalBossEscape,errors:__errors.slice()};
     """)
     assert settlement=={'afterWave1':{'money':117,'best':1,'r1':True,'r2':False},
       'afterWave2':{'money':107,'best':2,'failed':1,'r2':True},
       'finalGate':{'delayed':True,'victory':True},
       'lethal':{'hasAbort':True,'money':180,'failed':1,'settled':True,'state':'GAME_OVER'},
       'bossFlow':{'spawned':1,'type':'boss','state':'VICTORY','settled':True},
-      'finalFailure':{'money':70,'failed':2,'oldSettled':True,'finalSettled':True,'state':'GAME_OVER'},
+      'finalEscapePending':{'money':90,'failed':1,'oldSettled':False,'finalSettled':True,'state':'PLAYING'},
       'bountyFine':{'money':0,'failed':1,'settled':True,'state':'PLAYING'},
-      'finalBountyFine':{'money':146,'reward':176,'failed':2,'oldSettled':True,'finalSettled':True,'state':'GAME_OVER'},
-      'terminalLoop':{'money':0,'state':'GAME_OVER','enemies':0,'oldSettled':True,'finalSettled':True},
+      'finalBountyPending':{'money':166,'reward':176,'failed':1,'oldSettled':False,'finalSettled':True,'state':'PLAYING'},
+      'terminalLoop':{'money':74,'state':'VICTORY','enemies':0,'oldSettled':True,'finalSettled':True},
       'lethalBossEscape':{'lives':0,'money':0,'state':'GAME_OVER','enemies':0,'settled':True},'errors':[]},settlement
     strategy=d.execute_script("""
       const I=__internals;
@@ -167,14 +167,18 @@ try:
         d.get('http://127.0.0.1:8770'+path);time.sleep(.25)
         mobile.append(d.execute_script("""
           const canvasEl=document.querySelector('canvas'),canvas=canvasEl.getBoundingClientRect();
+          const railHidden=getComputedStyle(document.querySelector('.game-rail')).display==='none';
+          const fullWindow=canvas.left<=5&&canvas.top<=5&&canvas.right>=innerWidth-5&&canvas.bottom>=innerHeight-5;
           return [...document.querySelectorAll('.game-entry')].map(e=>{
             const tile=e.querySelector('.game-tile').getBoundingClientRect(),tab=e.querySelector('.open-tab').getBoundingClientRect();
             const intersects=(a,b)=>!(a.right<=b.left||a.left>=b.right||a.bottom<=b.top||a.top>=b.bottom);
-            return {tileOverlap:intersects(tab,tile),canvasOverlap:intersects(tab,canvas),scaleDiff:Math.abs(canvas.width/canvasEl.width-canvas.height/canvasEl.height)};
+            return {tileOverlap:intersects(tab,tile),canvasOverlap:intersects(tab,canvas),scaleDiff:Math.abs(canvas.width/canvasEl.width-canvas.height/canvasEl.height),railHidden,fullWindow};
           });
         """))
-    assert all(not item['tileOverlap'] and not item['canvasOverlap'] and item['scaleDiff']<.02 for page in mobile for item in page),mobile
-    print('MOBILE SIDEBAR GEOMETRY PASS:',mobile)
+    zombie_mobile,flappy_mobile=mobile
+    assert all(not item['tileOverlap'] and not item['canvasOverlap'] and item['railHidden'] and item['fullWindow'] and item['scaleDiff']>.2 for item in zombie_mobile),mobile
+    assert all(not item['tileOverlap'] and not item['canvasOverlap'] and not item['railHidden'] and item['scaleDiff']<.02 for item in flappy_mobile),mobile
+    print('MOBILE GAME GEOMETRY PASS:',mobile)
     d.set_window_size(390,844);d.get('http://127.0.0.1:8770/zombie-defense/');time.sleep(.4)
     portrait=d.execute_script("""
       const n=document.querySelector('.rotate-notice'),s=document.getElementById('shell');
