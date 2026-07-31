@@ -7,7 +7,7 @@
 
 - **Flappy Canvas** — a reflex-based endless flying game.
 - **Zombie Defense: Last Outpost** — a 12-wave tactical tower-defense campaign.
-- **Road Hop** — an endless low-poly 3D traffic-crossing game starring one original robot, PIP.
+- **Road Hop** — a low-poly 3D traffic-crossing game with four biomes, six original cosmetic characters, Endless, and a 50-row Road Rally.
 
 The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. Road Hop remains local in this working tree until an explicitly authorized GitHub push and Vercel release.
 
@@ -595,9 +595,21 @@ The recommended next balancing phase for this project is:
 
 ## Road Hop specification
 
+### Road Hop expansion
+
+Road Hop now has two separately selected modes and four pre-run biome choices. **Endless** preserves the original unbounded score chase. **Road Rally** is a deterministic 50-row race against three visible rivals with careful, balanced, and aggressive short-horizon risk profiles. Rivals score forward, lateral, and wait actions against blockers and predicted traffic; they can wait or crash, respawn at their last 10-row checkpoint, and never teleport ahead. Rally rewards are settled once (60/40/25/15 coins by place).
+
+The selectable biomes are Meadow, Rainy Wetlands, Autumn, and Haunted. Wetlands adds rain, reeds, water lanes, and three-column bridges; water cells outside a bridge reject movement. Autumn adds warm fog, red/orange foliage, fences, leaf piles, and falling leaves. Haunted adds dark fog, dead trees, graves, pumpkins, lamps, and wisps. Ambience updates only during play and generated resources are disposed on replacement.
+
+One persistent coin is minted for each newly reached forward row in a run. Sideways movement, retreating, and revisiting a row mint nothing. A guarded near miss adds two coins at most once per four forward rows. Original cosmetic characters are PIP (free), BOUNCE (75), RUSTY (175), BOLT (300), JACK (500), and WISP (750); cosmetics grant no gameplay advantage. Balance, ownership, selection, biome/mode choice, records, rotating local missions, daily records, and postcards use the normalized `roadHop.save.v2` localStorage document. Corrupt or stale values fall back safely.
+
+Three date-seeded local missions rotate daily and reward 25 coins once each. The daily challenge seed is derived only from the local UTC date, so no service call is needed. Reaching row 10 unlocks the selected biome postcard. Saves are browser-local: there are no accounts, cloud sync, online multiplayer, authoritative leaderboards, analytics, or network requests.
+
+Controls remain Arrow keys/WASD or swipe, with P/Escape and the on-screen control for pause. Menus, shop, gallery, race status, retry, and resume are DOM controls designed for desktop and phone viewports.
+
 ### World generation and pacing
 
-Road indices are deterministic within a run. Rows `0`, `1`, and every fifth row are safe grass. Other positive rows use a row-seeded value: values above `0.34` produce roads and the remainder produce grass. Grass rows receive one to three blocking trees; the opening rows protect the center cell so the first moves remain readable.
+Road indices are deterministic within a run. Rows `0`, `1`, and every fifth row are safe grass. In Meadow, Autumn, and Haunted, other positive rows use a row-seeded value: values above `0.34` produce roads and the remainder produce grass. Rainy Wetlands additionally converts every fourth eligible row—and some seeded candidates—into water lanes with a three-cell bridge. Grass rows receive one to three blocking trees; the opening rows protect the center cell so the first moves remain readable.
 
 Each road chooses one traffic direction and spawns two or three cars. Its speed is:
 
@@ -607,7 +619,7 @@ speed = 1.8 + seededVariation × 1.8 + min(row, 80) × 0.012 world units/second
 
 This creates a bounded increase from progress while preserving lane-to-lane variation. It is a transparent authored starting curve, not a claim of telemetry-calibrated balance.
 
-The game keeps approximately seven rows behind the player and thirty rows ahead. Lane groups and vehicle records outside both bounds are removed, and their Three.js geometry/material resources are explicitly disposed. This keeps both scene-object count and renderer memory bounded during long runs, backtracking, and retries.
+Endless mode keeps approximately seven rows behind the player and thirty rows ahead. Road Rally eagerly generates its fixed rows through row 50 so every rival evaluates the same complete course. Lane groups and vehicle records outside the active mode's bounds are removed, and their Three.js geometry/material resources are explicitly disposed. This keeps both scene-object count and renderer memory bounded during long runs, backtracking, mode changes, and retries.
 
 ### Movement, collision, and score
 
@@ -649,7 +661,7 @@ Three.js revision `170` is vendored at `vendor/three.module.min.js` and loaded f
 | Exposed debug handles | Enables deterministic Selenium tests for Canvas/WebGL-only state. These handles do not provide server access or trusted state. |
 | Orthographic WebGL for Road Hop | Produces a convincing low-poly 3D world while keeping grid hops readable. It costs more GPU and dependency weight than a faux-3D Canvas renderer. |
 | Locally vendored Three.js revision 170 | Avoids runtime CDN calls and keeps static deployment deterministic. The repository must deliberately update and re-test the pinned dependency. |
-| One original Road Hop character | Keeps the first release focused and avoids implying copied Crossy Road content. Character selection and unlock economies remain out of scope. |
+| Six original Road Hop characters | Adds a local cosmetic progression loop without copyrighted assets or gameplay advantages. Prices are fixed and there are no abilities or inventory. |
 
 ---
 
@@ -681,6 +693,10 @@ pixel-arcade/
 │   ├── verify_road_hop_shell.py       # Real WebGL/Three.js initialization
 │   ├── verify_road_hop_gameplay.py    # Movement, blockers, pause, collision, persistence
 │   ├── verify_road_hop_mobile.py      # Swipe, responsive buffer, pause, reload
+│   ├── verify_road_hop_expansion_source.py # Expansion definitions and DOM contract
+│   ├── verify_road_hop_expansion_runtime.py # Economy, shop, persistence, and daily run
+│   ├── verify_road_hop_racing_ai.py   # Deterministic rivals, rewards, bounds, disposal
+│   ├── verify_road_hop_expansion_mobile.py # Phone controls, panels, and Rally swipe
 │   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks
 │   └── verify_production.py           # Production browser smoke test
 └── README.md
