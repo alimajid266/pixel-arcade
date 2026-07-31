@@ -9,7 +9,7 @@
 - **Zombie Defense: Last Outpost** — a 12-wave tactical tower-defense campaign.
 - **Road Hop** — a low-poly 3D traffic-crossing game with four biomes, six original cosmetic characters, Endless, and a 50-row Road Rally.
 
-The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. Road Hop remains local in this working tree until an explicitly authorized GitHub push and Vercel release.
+The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. New local changes remain unpublished until an explicitly authorized GitHub push and Vercel release.
 
 ## Contents
 
@@ -68,11 +68,11 @@ It includes:
 
 ### Road Hop
 
-Road Hop is an endless lane-crossing game rendered as a real low-poly 3D scene. The player controls PIP, a single original block-built robot, and hops across roads while avoiding traffic and trees. Maximum forward progress is the score; moving backward does not reduce it.
+Road Hop is a lane-crossing game rendered as a real low-poly 3D scene. The player starts as PIP and can unlock five additional original block-built cosmetics, hopping across roads while avoiding traffic and trees. Maximum forward progress is the score; moving backward does not reduce it.
 
 It includes:
 
-- orthographic WebGL rendering, fog, lighting, shadows, and procedural geometry;
+- orthographic WebGL rendering, fog, lightweight unshadowed lighting, and procedural geometry;
 - procedurally generated grass and road lanes;
 - traffic with varied colors, directions, spacing, and increasing speed;
 - keyboard and touch-swipe controls;
@@ -147,17 +147,16 @@ It includes:
 
 **In scope**
 
-- One endless crossing mode with grass and moving-road lanes.
-- One playable character: PIP.
+- Endless crossing and a deterministic 50-row Road Rally.
+- Six cosmetic characters: PIP, BOUNCE, RUSTY, BOLT, JACK, and WISP.
 - Four-direction, one-cell hops with obstacle and vehicle collision.
 - Procedural low-poly geometry rendered through a locally vendored Three.js module.
 - Keyboard, pointer-swipe, and touch-swipe input.
-- Menu, Playing, Paused, and Game Over states.
-- Local best-score persistence.
+- Menu, Playing, Paused, Game Over, and Rally-finish states.
+- Local economy, ownership, missions, postcards, daily records, and best-score persistence.
 
 **Out of scope**
 
-- Additional characters, unlocks, cosmetics, missions, or currencies.
 - Rivers, floating logs, trains, multiplayer, accounts, or online leaderboards.
 - Imported models, textures, copyrighted character designs, or Crossy Road assets.
 - Server-authoritative simulation or anti-cheat.
@@ -260,7 +259,7 @@ The games preserve fixed logical worlds while scaling their displayed Canvas:
 |---|---:|
 | Flappy Canvas | `400 × 600` |
 | Zombie Defense | `800 × 650` |
-| Road Hop | viewport-sized WebGL buffer, capped at `2×` device pixel ratio |
+| Road Hop | viewport-sized WebGL buffer, capped at `1×` device pixel ratio |
 
 Zombie Defense uses a `20 × 12` battlefield grid with `40px` logical cells. Its top `480px` is the build grid, `500px` is the playable world area, and the remaining space is the HUD.
 
@@ -599,7 +598,7 @@ The recommended next balancing phase for this project is:
 
 Road Hop now has two separately selected modes and four pre-run biome choices. **Endless** preserves the original unbounded score chase. **Road Rally** is a deterministic 50-row race against three visible rivals with careful, balanced, and aggressive short-horizon risk profiles. Rivals score forward, lateral, and wait actions against blockers and predicted traffic; they can wait or crash, respawn at their last 10-row checkpoint, and never teleport ahead. Rally rewards are settled once (60/40/25/15 coins by place).
 
-The selectable biomes are Meadow, Rainy Wetlands, Autumn, and Haunted. Wetlands adds rain, reeds, water lanes, and three-column bridges; water cells outside a bridge reject movement. Autumn adds warm fog, red/orange foliage, fences, leaf piles, and falling leaves. Haunted adds dark fog, dead trees, graves, pumpkins, lamps, and wisps. Ambience updates only during play and generated resources are disposed on replacement.
+The selectable biomes are Meadow, Rainy Wetlands, Autumn, and Haunted. Wetlands adds rain, reeds, water lanes, and three-column bridges; water cells outside a bridge reject movement. Autumn adds warm fog, red/orange foliage, fences, leaf piles, and falling leaves. Haunted uses a high-contrast violet/ink palette with a moon, floating spectral figures, alternating grave clusters, pumpkins, luminous lamps, and crooked dead trees. Ambience updates only during play and generated resources are disposed on replacement.
 
 One persistent coin is minted for each newly reached forward row in a run. Sideways movement, retreating, and revisiting a row mint nothing. A guarded near miss adds two coins at most once per four forward rows. Original cosmetic characters are PIP (free), BOUNCE (75), RUSTY (175), BOLT (300), JACK (500), and WISP (750); cosmetics grant no gameplay advantage. Balance, ownership, selection, biome/mode choice, records, rotating local missions, daily records, and postcards use the normalized `roadHop.save.v2` localStorage document. Corrupt or stale values fall back safely.
 
@@ -619,7 +618,7 @@ speed = 1.8 + seededVariation × 1.8 + min(row, 80) × 0.012 world units/second
 
 This creates a bounded increase from progress while preserving lane-to-lane variation. It is a transparent authored starting curve, not a claim of telemetry-calibrated balance.
 
-Endless mode keeps approximately seven rows behind the player and thirty rows ahead. Road Rally eagerly generates its fixed rows through row 50 so every rival evaluates the same complete course. Lane groups and vehicle records outside the active mode's bounds are removed, and their Three.js geometry/material resources are explicitly disposed. This keeps both scene-object count and renderer memory bounded during long runs, backtracking, mode changes, and retries.
+Endless mode keeps approximately seven rows behind the player and twenty-two rows ahead. Road Rally uses the same deterministic row function but materializes only the active racers' shared window instead of eagerly rendering all 50 rows. Every rival still evaluates identical row data while initial Rally geometry stays bounded. Lane groups and vehicle records outside the active mode's bounds are removed, and their Three.js geometry/material resources are explicitly disposed. Terrain surfaces extend beyond the camera and sit over a camera-following underlay so no square world boundary is exposed. Rendering uses one device pixel per CSS pixel, no multisample antialiasing, and no realtime shadow map; gameplay HUD writes are dirty-flagged and coalesced to at most one update per animation frame.
 
 ### Movement, collision, and score
 
@@ -633,7 +632,7 @@ Endless mode keeps approximately seven rows behind the player and thirty rows ah
 
 ### Rendering and dependency choice
 
-Road Hop uses an orthographic Three.js camera rather than a perspective camera so grid positions remain visually clear while still reading as 3D. All characters, cars, trees, roads, lane markings, and lights are procedural box geometry—there are no copied models or textures. Hemisphere and directional lighting, soft shadows, fog, a capped device-pixel ratio, and a camera following several rows ahead provide depth without requiring a general game engine or asset pipeline.
+Road Hop uses an orthographic Three.js camera rather than a perspective camera so grid positions remain visually clear while still reading as 3D. All characters, cars, trees, roads, lane markings, and lights are procedural geometry—there are no copied models or textures. Hemisphere and directional lighting, fog, unshadowed low-cost materials, a `1×` device-pixel-ratio cap, and a camera following several rows ahead provide depth without requiring a general game engine or asset pipeline.
 
 Three.js revision `170` is vendored at `vendor/three.module.min.js` and loaded from the same origin. This adds a comparatively large checked-in dependency but avoids a runtime CDN outage or third-party request.
 
@@ -696,6 +695,8 @@ pixel-arcade/
 │   ├── verify_road_hop_expansion_source.py # Expansion definitions and DOM contract
 │   ├── verify_road_hop_expansion_runtime.py # Economy, shop, persistence, and daily run
 │   ├── verify_road_hop_racing_ai.py   # Deterministic rivals, rewards, bounds, disposal
+│   ├── verify_road_hop_review_regressions.py # Save, daily, reward, and deterministic regressions
+│   ├── verify_road_hop_playtest_corrections.py # Performance, Haunted, framing, and PIP contracts
 │   ├── verify_road_hop_expansion_mobile.py # Phone controls, panels, and Rally swipe
 │   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks
 │   └── verify_production.py           # Production browser smoke test

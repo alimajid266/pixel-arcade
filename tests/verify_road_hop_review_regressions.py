@@ -130,12 +130,36 @@ try:
       for(const biome of ['autumn','haunted']){
         __game.setBiome(biome);__game.start();
         found[biome]=[];
-        __game.world.traverse(o=>{if(o.name)found[biome].push(o.name)});
+        if(biome==='haunted')found.hauntedPositions=[];
+        __game.world.traverse(o=>{
+          if(o.name)found[biome].push(o.name);
+          if(biome==='haunted'&&(o.name==='haunted-grave-cluster'||o.name==='haunted-lamp')){
+            const p=o.getWorldPosition(o.position.clone());
+            found.hauntedPositions.push(`${p.x.toFixed(2)}:${p.z.toFixed(2)}`);
+          }
+        });
+        if(biome==='haunted'){
+          if(__game.camera.getObjectByName('haunted-moon'))found[biome].push('haunted-moon');
+          if(__game.ambience.getObjectByName('haunted-ghost'))found[biome].push('haunted-ghost');
+        }
       }
       return found;
     """)
     assert 'autumn-leaf-pile' in props['autumn'], props
     assert 'haunted-lamp' in props['haunted'], props
+    assert 'haunted-grave-cluster' in props['haunted'], props
+    assert 'haunted-moon' in props['haunted'], props
+    assert 'haunted-ghost' in props['haunted'], props
+    assert len(props['hauntedPositions']) == len(set(props['hauntedPositions'])), props['hauntedPositions']
+
+    hud_writes = driver.execute_async_script("""
+      const done=arguments[0],before=__game.debug.uiWriteCount();
+      __game.setMode('endless');__game.start();__game.debug.clearBlockers(1);
+      for(const v of __game.vehicles){v.x=99;v.mesh.position.x=99}
+      __game.move('forward');__game.debug.advance(.25);
+      requestAnimationFrame(()=>done(__game.debug.uiWriteCount()-before));
+    """)
+    assert 0 <= hud_writes <= 1, hud_writes
     assert driver.execute_script('return __errors.slice()') == []
     print('ROAD HOP REVIEW REGRESSIONS PASS', normalized, rollover, biome_mission, postcard, daily_rally)
 finally:
