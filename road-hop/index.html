@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#16102b">
+<title>Road Hop</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#16102b;color:#fff;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}body{display:grid;place-items:center}.shell{position:relative;width:100%;height:100%}#game{display:block;width:100%;height:100%;touch-action:none}.hud{position:absolute;inset:0;pointer-events:none}.brand{position:absolute;left:18px;top:16px;color:#fff7d6;text-decoration:none;font-weight:900;letter-spacing:.09em;pointer-events:auto;text-shadow:0 3px 0 #20113f}.panel{position:absolute;left:50%;top:50%;width:min(430px,calc(100% - 32px));transform:translate(-50%,-50%);padding:26px;text-align:center;background:#17102eea;border:4px solid #f7d154;box-shadow:9px 10px 0 #080411;pointer-events:auto}.panel h1{margin:0 0 8px;color:#55f3dd;font-size:clamp(36px,8vw,64px);line-height:.9;text-shadow:4px 4px 0 #7b45da}.panel p{line-height:1.5;color:#ddd3f6}.panel button{min-width:180px;padding:13px 22px;border:0;background:#f7d154;color:#20113f;font-family:inherit;font-size:17px;font-weight:900;box-shadow:5px 6px 0 #7b45da;cursor:pointer}.panel button:active{transform:translate(3px,3px);box-shadow:2px 3px 0 #7b45da}.score{position:absolute;right:22px;top:16px;text-align:right;font-weight:1000;font-size:24px;text-shadow:3px 3px 0 #20113f}.score small{display:block;font-size:11px;letter-spacing:.1em;color:#55f3dd}.pause-toggle{position:absolute;right:18px;bottom:16px;width:48px;height:48px;padding:0;border:3px solid #f7d154;background:#17102eea;color:#fff7d6;font-family:inherit;font-size:20px;font-weight:900;pointer-events:auto;cursor:pointer;box-shadow:4px 5px 0 #080411}.hint{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);padding:7px 11px;background:#17102eb8;color:#fff7d6;font-size:12px;font-weight:800;white-space:nowrap}.hidden{display:none!important}@media(max-width:600px){.brand{left:12px;top:10px;font-size:12px}.score{right:12px;top:9px;font-size:20px}.hint{bottom:10px;font-size:10px}.panel{padding:21px}}
+</style>
+</head>
+<body>
+<main class="shell">
+<canvas id="game" aria-label="Road Hop 3D game"></canvas>
+<div class="hud">
+<a class="brand" href="/">← PIXEL ARCADE</a>
+<div class="score"><small>BEST <span id="best">0</span></small><span id="score">0</span></div>
+<button id="pause-toggle" class="pause-toggle hidden" type="button" aria-label="Pause game">Ⅱ</button>
+<section id="menu" class="panel"><h1>ROAD<br>HOP</h1><p>Guide PIP across an endless low-poly world.<br>Arrow keys / WASD / swipe</p><button id="start">START HOPPING</button></section>
+<section id="gameover" class="panel hidden"><h1>CRASHED!</h1><p>You crossed <strong id="final-score">0</strong> lanes.</p><button id="retry">HOP AGAIN</button></section>
+<section id="pause" class="panel hidden"><h1>PAUSED</h1><p>The traffic is frozen.</p><button id="resume">KEEP HOPPING</button></section>
+<div class="hint">ARROWS / WASD · SWIPE · P TO PAUSE</div>
+</div>
+</main>
+<script>window.__errors=[];addEventListener('error',e=>window.__errors.push(String(e.error||e.message)));addEventListener('unhandledrejection',e=>window.__errors.push(String(e.reason)));window.__game={ready:false,state:'LOADING'};</script>
+<!-- Three.js is vendored locally at ../vendor/three.module.min.js. -->
+<script type="module">import './game.js';</script>
+</body>
+</html>

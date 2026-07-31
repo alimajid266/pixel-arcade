@@ -127,7 +127,7 @@
   /* Shared Pixel Arcade rail: keep this block identical in every game. */
   .game-rail{position:fixed;left:14px;top:50%;transform:translateY(-50%);width:122px;padding:10px;z-index:5;color:#fff7d6;background:#2f185c;border:4px solid #f7d154;box-shadow:7px 8px 0 #140a2b;text-align:center;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
   .rail-brand{display:block;color:#fff7d6;text-decoration:none;font-size:12px;font-weight:900;letter-spacing:1px;margin:4px 0 12px}.rail-logo{position:relative;display:block;width:34px;height:24px;margin:0 auto 7px;background:#5730a8;border:4px solid #151515;box-shadow:inset 9px 0 #ff7a59,inset -9px 0 #8bc34a}.rail-logo:after{content:'';position:absolute;left:11px;top:6px;width:4px;height:4px;background:#f7d154;box-shadow:-5px 0 #f7d154,5px 0 #f7d154,0 -5px #f7d154,0 5px #f7d154}
-  .game-entry{position:relative}.game-tile{display:block;width:100%;min-height:58px;margin:7px 0;padding:8px 3px;border:3px solid #140a2b;color:#fff7d6;background:#5730a8;font:900 10px ui-monospace,SFMono-Regular,Consolas,monospace;text-decoration:none;cursor:pointer}.game-tile.flappy{color:#2f185c;background:#ff7a59}.game-tile.zombie{color:#142414;background:#8bc34a}.game-tile.active{border-color:#fff7d6;box-shadow:inset 0 -5px 0 rgba(20,10,43,.28)}.game-tile.available:hover,.game-tile.available:focus-visible{filter:brightness(1.12);transform:translate(-1px,-1px)}.game-tile small{display:block;margin-top:5px;font-size:9px}.game-tile.future{opacity:.62;color:#fff7d6;background:#3b2871}
+  .game-entry{position:relative}.game-tile{display:block;width:100%;min-height:58px;margin:7px 0;padding:8px 3px;border:3px solid #140a2b;color:#fff7d6;background:#5730a8;font:900 10px ui-monospace,SFMono-Regular,Consolas,monospace;text-decoration:none;cursor:pointer}.game-tile.flappy{color:#2f185c;background:#ff7a59}.game-tile.zombie{color:#142414;background:#8bc34a}.game-tile.hop{color:#20113f;background:#55f3dd}.game-tile.active{border-color:#fff7d6;box-shadow:inset 0 -5px 0 rgba(20,10,43,.28)}.game-tile.available:hover,.game-tile.available:focus-visible{filter:brightness(1.12);transform:translate(-1px,-1px)}.game-tile small{display:block;margin-top:5px;font-size:9px}.game-tile.future{opacity:.62;color:#fff7d6;background:#3b2871}
   .open-tab{position:absolute;right:-26px;top:-4px;width:22px;height:22px;line-height:18px;color:#fff;background:#21123f;border:2px solid #f7d154;text-decoration:none;font-size:12px}.open-tab:hover,.open-tab:focus-visible{color:#21123f;background:#f7d154}
   .rail-audio{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:10px 0 8px;padding-top:9px;border-top:2px solid #6f55a7}.audio-toggle{min-width:0;padding:6px 2px;color:#fff7d6;background:#21123f;border:2px solid #f7d154;font:900 9px ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer}.audio-toggle small{display:block;margin-top:3px;color:#9fe36b;font-size:8px}.audio-toggle[data-state="off"]{color:#9d91ba;border-color:#6f628e}.audio-toggle[data-state="off"] small{color:#ff7a59}.audio-toggle:hover,.audio-toggle:focus-visible{background:#5730a8}
   @media(max-width:760px){body{padding-left:74px}.game-rail{left:4px;width:62px;padding:5px}.rail-brand{font-size:8px}.rail-logo{width:28px;height:20px}.game-tile{min-height:44px;font-size:7px}.game-tile small{display:none}.open-tab{right:-18px;width:18px;height:18px;line-height:14px;font-size:9px}.rail-audio{grid-template-columns:1fr}.audio-toggle{font-size:7px;padding:4px 1px}.audio-toggle small{display:none}canvas{max-width:calc(100vw - 96px)}}
@@ -152,6 +152,10 @@
     <a id="zombie-game-link" class="game-tile available zombie" href="http://localhost:8766/index.html">ZOMBIE DEFENSE<small>PLAY GAME</small></a>
     <a id="zombie-new-tab" class="open-tab" href="http://localhost:8766/index.html" target="_blank" rel="noopener" aria-label="Open Zombie Defense in a new tab" title="Open in new tab">↗</a>
   </div>
+  <div class="game-entry">
+    <a id="road-hop-game-link" class="game-tile available hop" href="/road-hop/">ROAD HOP<small>PLAY GAME</small></a>
+    <a id="road-hop-new-tab" class="open-tab" href="/road-hop/" target="_blank" rel="noopener" aria-label="Open Road Hop in a new tab" title="Open in new tab">↗</a>
+  </div>
   <div class="rail-audio" aria-label="Audio settings">
     <button id="music-toggle" class="audio-toggle" type="button" data-state="on" aria-pressed="false">♫ MUSIC<small>ON</small></button>
     <button id="sfx-toggle" class="audio-toggle" type="button" data-state="on" aria-pressed="false">⚡ SFX<small>ON</small></button>
@@ -164,10 +168,13 @@
 
 const flappyUrl = '/flappy/';
 const zombieUrl = '/zombie-defense/';
+const roadHopUrl = '/road-hop/';
 document.getElementById('flappy-game-link').href = flappyUrl;
 document.getElementById('flappy-new-tab').href = flappyUrl;
 document.getElementById('zombie-game-link').href = zombieUrl;
 document.getElementById('zombie-new-tab').href = zombieUrl;
+document.getElementById('road-hop-game-link').href = roadHopUrl;
+document.getElementById('road-hop-new-tab').href = roadHopUrl;
 
 window.__errors = [];
 window.addEventListener('error', function (event) {

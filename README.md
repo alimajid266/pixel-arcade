@@ -3,12 +3,13 @@
 [![Production](https://img.shields.io/badge/production-live-8bc34a)](https://pixel-arcade-pied.vercel.app)
 [![Architecture](https://img.shields.io/badge/architecture-static%20HTML5%20Canvas-6c3fc5)](#technical-architecture)
 
-**Pixel Arcade** is a small browser arcade that puts two complete games behind one launcher and one public URL:
+**Pixel Arcade** is a small browser arcade whose current working tree contains three complete games behind one launcher:
 
 - **Flappy Canvas** — a reflex-based endless flying game.
 - **Zombie Defense: Last Outpost** — a 12-wave tactical tower-defense campaign.
+- **Road Hop** — an endless low-poly 3D traffic-crossing game starring one original robot, PIP.
 
-Play it at **https://pixel-arcade-pied.vercel.app**.
+The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. Road Hop remains local in this working tree until an explicitly authorized GitHub push and Vercel release.
 
 ## Contents
 
@@ -19,6 +20,7 @@ Play it at **https://pixel-arcade-pied.vercel.app**.
 - [Flappy Canvas specification](#flappy-canvas-specification)
 - [Zombie Defense specification](#zombie-defense-specification)
 - [Zombie Defense difficulty model](#zombie-defense-difficulty-model)
+- [Road Hop specification](#road-hop-specification)
 - [Design decisions](#design-decisions)
 - [Repository structure](#repository-structure)
 - [Local development](#local-development)
@@ -64,6 +66,19 @@ It includes:
 - wave rewards, escape penalties, lives, victory, and defeat;
 - pause, instructions, map previews, and independent audio controls.
 
+### Road Hop
+
+Road Hop is an endless lane-crossing game rendered as a real low-poly 3D scene. The player controls PIP, a single original block-built robot, and hops across roads while avoiding traffic and trees. Maximum forward progress is the score; moving backward does not reduce it.
+
+It includes:
+
+- orthographic WebGL rendering, fog, lighting, shadows, and procedural geometry;
+- procedurally generated grass and road lanes;
+- traffic with varied colors, directions, spacing, and increasing speed;
+- keyboard and touch-swipe controls;
+- pause, game-over, instant retry, synthesized hop/crash effects, and a local best score;
+- bounded lane cleanup so endless play does not retain the entire traversed world.
+
 ---
 
 ## Project and game scope
@@ -73,9 +88,9 @@ It includes:
 **In scope**
 
 - One static launcher at `/`.
-- Two playable games at `/flappy/` and `/zombie-defense/`.
-- Same-origin navigation and a shared in-game arcade rail.
-- Responsive desktop and mobile presentation, including portrait play for Flappy Canvas.
+- Three playable games at `/flappy/`, `/zombie-defense/`, and `/road-hop/`.
+- Same-origin navigation from the launcher and in-game return/navigation controls.
+- Responsive desktop and mobile presentation, including portrait play for Flappy Canvas and Road Hop.
 - A Zombie Defense portrait orientation gate at widths up to 736 px where its wider tactical UI would be too small to use safely.
 - Local browser persistence for preferences and records.
 - Static deployment through one GitHub repository and one Vercel project.
@@ -128,6 +143,25 @@ It includes:
 - Save/resume of an active campaign.
 - Backend analytics or telemetry-based automatic balancing.
 
+### Road Hop scope
+
+**In scope**
+
+- One endless crossing mode with grass and moving-road lanes.
+- One playable character: PIP.
+- Four-direction, one-cell hops with obstacle and vehicle collision.
+- Procedural low-poly geometry rendered through a locally vendored Three.js module.
+- Keyboard, pointer-swipe, and touch-swipe input.
+- Menu, Playing, Paused, and Game Over states.
+- Local best-score persistence.
+
+**Out of scope**
+
+- Additional characters, unlocks, cosmetics, missions, or currencies.
+- Rivers, floating logs, trains, multiplayer, accounts, or online leaderboards.
+- Imported models, textures, copyrighted character designs, or Crossy Road assets.
+- Server-authoritative simulation or anti-cheat.
+
 ---
 
 ## How to play
@@ -170,6 +204,17 @@ The next-wave control becomes available after the current wave's **last queued z
 
 Zombie Defense uses a `1.5s` resume countdown. Flappy Canvas uses a three-second `3 → 2 → 1` resume countdown.
 
+### Road Hop controls
+
+| Action | Input |
+|---|---|
+| Start / retry | Enter, Space, or the on-screen button |
+| Hop | Arrow keys, WASD, or swipe in the desired direction |
+| Pause / resume | `P`, `Escape`, the in-game `Ⅱ` control, or the Resume button |
+| Return to arcade | `← Pixel Arcade` link |
+
+PIP cannot hop outside the seven-cell lateral boundary, below the starting row, or into a tree. A hop lasts `0.16s`; collision is evaluated against traffic after landing. Score equals the farthest row reached.
+
 ---
 
 ## Technical architecture
@@ -182,19 +227,19 @@ Pixel Arcade is a static web application:
 Browser
 ├── /                       → index.html
 ├── /flappy/                → flappy/index.html
-└── /zombie-defense/        → zombie-defense/index.html
+├── /zombie-defense/        → zombie-defense/index.html
+└── /road-hop/              → road-hop/index.html + local Three.js module
 ```
 
-After the HTML files are delivered, gameplay runs entirely in the browser:
+After the static files are delivered, gameplay runs entirely in the browser:
 
-- no framework;
-- no package bundle;
+- no application framework or package bundle step;
 - no runtime backend;
 - no API or database;
-- no externally hosted game assets;
+- no externally hosted game assets or runtime CDN dependency;
 - no server-side game state.
 
-Each game is a self-contained HTML file containing its markup, CSS, Canvas renderer, state machine, input handling, procedural graphics, procedural Web Audio, and persistence wrapper.
+Flappy Canvas and Zombie Defense remain self-contained Canvas HTML files. Road Hop separates its game module from its HTML shell and vendors a pinned Three.js module locally so its WebGL renderer has no production network dependency.
 
 ### Main implementation patterns
 
@@ -215,6 +260,7 @@ The games preserve fixed logical worlds while scaling their displayed Canvas:
 |---|---:|
 | Flappy Canvas | `400 × 600` |
 | Zombie Defense | `800 × 650` |
+| Road Hop | viewport-sized WebGL buffer, capped at `2×` device pixel ratio |
 
 Zombie Defense uses a `20 × 12` battlefield grid with `40px` logical cells. Its top `480px` is the build grid, `500px` is the playable world area, and the remaining space is the HUD.
 
@@ -240,6 +286,8 @@ Zombie Defense stores:
 - best wave;
 - selected map;
 - music/SFX preferences.
+
+Road Hop uses `roadHop.best` for the farthest locally completed row.
 
 Changing domains/origins does not migrate browser storage automatically.
 
@@ -545,6 +593,40 @@ The recommended next balancing phase for this project is:
 
 ---
 
+## Road Hop specification
+
+### World generation and pacing
+
+Road indices are deterministic within a run. Rows `0`, `1`, and every fifth row are safe grass. Other positive rows use a row-seeded value: values above `0.34` produce roads and the remainder produce grass. Grass rows receive one to three blocking trees; the opening rows protect the center cell so the first moves remain readable.
+
+Each road chooses one traffic direction and spawns two or three cars. Its speed is:
+
+```text
+speed = 1.8 + seededVariation × 1.8 + min(row, 80) × 0.012 world units/second
+```
+
+This creates a bounded increase from progress while preserving lane-to-lane variation. It is a transparent authored starting curve, not a claim of telemetry-calibrated balance.
+
+The game keeps approximately seven rows behind the player and thirty rows ahead. Lane groups and vehicle records outside both bounds are removed, and their Three.js geometry/material resources are explicitly disposed. This keeps both scene-object count and renderer memory bounded during long runs, backtracking, and retries.
+
+### Movement, collision, and score
+
+- Lateral cells range from `-7` through `7`.
+- Each hop moves exactly one cell and takes `0.16s` with a smooth interpolation plus a vertical arc.
+- Input is ignored while a hop is already active, preventing accidental multi-cell skips.
+- Tree occupancy is checked before a hop begins.
+- Vehicle collision uses the landed player cell and the vehicle's current horizontal extent.
+- Score is the maximum row reached during the run; retreating never removes points.
+- A larger score replaces `roadHop.best` at game over.
+
+### Rendering and dependency choice
+
+Road Hop uses an orthographic Three.js camera rather than a perspective camera so grid positions remain visually clear while still reading as 3D. All characters, cars, trees, roads, lane markings, and lights are procedural box geometry—there are no copied models or textures. Hemisphere and directional lighting, soft shadows, fog, a capped device-pixel ratio, and a camera following several rows ahead provide depth without requiring a general game engine or asset pipeline.
+
+Three.js revision `170` is vendored at `vendor/three.module.min.js` and loaded from the same origin. This adds a comparatively large checked-in dependency but avoids a runtime CDN outage or third-party request.
+
+---
+
 ## Design decisions
 
 | Decision | Reason and tradeoff |
@@ -564,7 +646,10 @@ The recommended next balancing phase for this project is:
 | Early next-wave start | Gives skilled players control over pacing and income timing. It required per-wave enemy ownership and settlement records. |
 | Handcrafted waves plus formulas | Supports intentional enemy introductions while retaining predictable scaling. It still needs telemetry/simulation for statistical calibration. |
 | Data-driven maps | Routes, palettes, props, occupancy, and previews can change without rewriting combat systems. |
-| Exposed debug handles | Enables deterministic Selenium tests for Canvas-only state. These handles do not provide server access or trusted state. |
+| Exposed debug handles | Enables deterministic Selenium tests for Canvas/WebGL-only state. These handles do not provide server access or trusted state. |
+| Orthographic WebGL for Road Hop | Produces a convincing low-poly 3D world while keeping grid hops readable. It costs more GPU and dependency weight than a faux-3D Canvas renderer. |
+| Locally vendored Three.js revision 170 | Avoids runtime CDN calls and keeps static deployment deterministic. The repository must deliberately update and re-test the pinned dependency. |
+| One original Road Hop character | Keeps the first release focused and avoids implying copied Crossy Road content. Character selection and unlock economies remain out of scope. |
 
 ---
 
@@ -577,6 +662,11 @@ pixel-arcade/
 │   └── index.html                     # Flappy Canvas
 ├── zombie-defense/
 │   └── index.html                     # Zombie Defense
+├── road-hop/
+│   ├── index.html                     # Road Hop shell and HUD
+│   └── game.js                        # Three.js scene, simulation, and input
+├── vendor/
+│   └── three.module.min.js            # Pinned Three.js r170 module
 ├── tests/
 │   ├── verify_source_contract.py      # Same-origin/source invariants
 │   ├── verify_flappy_feedback.py      # Flappy behavior and rendering checks
@@ -586,6 +676,11 @@ pixel-arcade/
 │   ├── verify_zombie_strategy.py      # Strategy, accounting, input, responsive tests
 │   ├── verify_zombie_escape.py        # Real route exit and 12-wave outcome checks
 │   ├── verify_combined_arcade.py      # Launcher/game integration
+│   ├── verify_road_hop_source.py       # Road Hop local-dependency/source contract
+│   ├── verify_road_hop_security.py     # Vendor integrity and unsafe-runtime scan
+│   ├── verify_road_hop_shell.py       # Real WebGL/Three.js initialization
+│   ├── verify_road_hop_gameplay.py    # Movement, blockers, pause, collision, persistence
+│   ├── verify_road_hop_mobile.py      # Swipe, responsive buffer, pause, reload
 │   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks
 │   └── verify_production.py           # Production browser smoke test
 └── README.md
@@ -608,6 +703,7 @@ Open:
 - Launcher: http://127.0.0.1:8770/
 - Flappy Canvas: http://127.0.0.1:8770/flappy/
 - Zombie Defense: http://127.0.0.1:8770/zombie-defense/
+- Road Hop: http://127.0.0.1:8770/road-hop/
 
 Do not use the development server as a public production server.
 
@@ -639,6 +735,11 @@ In another terminal:
 .venv/bin/python tests/verify_zombie_strategy.py
 .venv/bin/python tests/verify_zombie_escape.py
 .venv/bin/python tests/verify_combined_arcade.py
+.venv/bin/python tests/verify_road_hop_source.py
+.venv/bin/python tests/verify_road_hop_security.py
+.venv/bin/python tests/verify_road_hop_shell.py
+.venv/bin/python tests/verify_road_hop_gameplay.py
+.venv/bin/python tests/verify_road_hop_mobile.py
 .venv/bin/python tests/verify_latest_feedback.py
 ```
 
@@ -650,8 +751,9 @@ Production smoke test:
 
 The regression suite covers, among other behavior:
 
-- launcher and same-origin navigation;
-- Canvas runtime errors and initial states;
+- launcher and same-origin navigation across all three games;
+- Canvas/WebGL runtime errors and initial states;
+- Road Hop's real Three.js renderer, orthographic camera, generated lane bounds, renderer-memory stability across retries, UI-button start/retry/resume/touch-pause paths, one-cell movement, score monotonicity, tree blocking, pause/resume, vehicle collision, local best-score reload, exact `390×844` swipe/cancel mapping, and responsive backing buffer;
 - Flappy scoring, pacing, ghost orientation/visibility, pause, and menu geometry;
 - exact `360×800`, `390×844`, and `430×932` Flappy portrait geometry, touch mapping, readable scale, and toolbar target sizes;
 - exact `667×375`, `844×414`, and `932×430` Zombie full-window landscape scale, text bounds, and non-uniform pointer mapping;
@@ -667,7 +769,7 @@ The regression suite covers, among other behavior:
 
 ## Deployment
 
-Production is deployed as one static Vercel project connected to the repository's `main` branch:
+Production is deployed as one static Vercel project connected to the repository's `main` branch. The Road Hop changes documented here are locally verified but are **not yet present in production**; publishing them requires explicit release approval.
 
 - Repository: https://github.com/alimajid266/pixel-arcade
 - Production: https://pixel-arcade-pied.vercel.app

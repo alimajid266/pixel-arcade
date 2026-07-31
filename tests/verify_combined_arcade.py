@@ -13,6 +13,7 @@ try:
     assert d.title=='Pixel Arcade',d.title
     assert d.find_element(By.ID,'play-flappy').get_attribute('href')==URL+'/flappy/'
     assert d.find_element(By.ID,'play-zombie').get_attribute('href')==URL+'/zombie-defense/'
+    assert d.find_element(By.ID,'play-road-hop').get_attribute('href')==URL+'/road-hop/'
     assert d.execute_script('return window.__errors')==[]
     d.save_screenshot('/tmp/pixel-arcade-home.png')
 
@@ -21,10 +22,11 @@ try:
       document.title,__game.machine.name,__errors.slice(),
       document.getElementById('flappy-game-link').getAttribute('href'),
       document.getElementById('zombie-game-link').getAttribute('href'),
+      document.getElementById('road-hop-game-link').getAttribute('href'),
       document.querySelector('.rail-brand').getAttribute('href'),
       __game.sound.context===null
     ]""")
-    assert flappy==['Flappy Canvas','MENU',[],'/flappy/','/zombie-defense/','/',True],flappy
+    assert flappy==['Flappy Canvas','MENU',[],'/flappy/','/zombie-defense/','/road-hop/','/',True],flappy
     d.find_element(By.ID,'music-toggle').click()
     assert d.execute_script('return [__game.sound.musicMuted,__game.sound.sfxMuted]')==[True,False]
     d.save_screenshot('/tmp/pixel-arcade-flappy.png')
@@ -34,10 +36,11 @@ try:
       document.title,__game.state.current,__errors.slice(),__game.maps.length,
       document.getElementById('flappy-game-link').getAttribute('href'),
       document.getElementById('zombie-game-link').getAttribute('href'),
+      document.getElementById('road-hop-game-link').getAttribute('href'),
       document.querySelector('.rail-brand').getAttribute('href'),
       __game.audio.ctx===null
     ]""")
-    assert zombie==['Zombie Defense: Last Outpost','MENU',[],3,'/flappy/','/zombie-defense/','/',True],zombie
+    assert zombie==['Zombie Defense: Last Outpost','MENU',[],3,'/flappy/','/zombie-defense/','/road-hop/','/',True],zombie
     d.find_element(By.ID,'sfx-toggle').click()
     assert d.execute_script('return [__game.audio.musicMuted,__game.audio.sfxMuted,__game.state.current]')==[False,True,'MENU']
     d.save_screenshot('/tmp/pixel-arcade-zombie.png')
@@ -46,7 +49,7 @@ try:
     assert d.current_url==URL+'/' and d.title=='Pixel Arcade',(d.current_url,d.title)
     d.set_window_size(390,844);d.get(URL+'/');time.sleep(.25)
     mobile=d.execute_script("return [document.documentElement.scrollWidth,window.innerWidth,document.querySelectorAll('.game-card').length,window.__errors.slice()]")
-    assert mobile[0]<=mobile[1] and mobile[2:]==[2,[]],mobile
+    assert mobile[0]<=mobile[1] and mobile[2:]==[3,[]],mobile
     d.save_screenshot('/tmp/pixel-arcade-home-mobile.png')
     print('COMBINED PIXEL ARCADE PASS:',flappy,zombie,mobile)
 finally:
