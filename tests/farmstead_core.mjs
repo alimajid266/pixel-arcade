@@ -61,4 +61,14 @@ assert.equal(safe.day, 1);
 assert.equal(safe.coins, 60);
 assert.equal(safe.energy, 14);
 assert.equal(safe.tiles.length, 30);
+
+const futureVersion = FarmModel.fromSnapshot({ version: 999, day: 77, coins: 1234, tiles: Array(30).fill({ state: 'grass' }) });
+assert.equal(futureVersion.day, 1);
+assert.equal(futureVersion.coins, 60);
+
+const forgedReadyTiles = Array.from({ length: 30 }, () => ({ state: 'grass' }));
+forgedReadyTiles[0] = { state: 'planted', crop: 'turnip', growth: 0, watered: true, ready: true };
+const forgedReady = FarmModel.fromSnapshot({ version: 1, tiles: forgedReadyTiles });
+assert.equal(forgedReady.tiles[0].ready, false);
+assert.deepEqual(forgedReady.act(0, 'harvest'), { ok: false, reason: 'Not ready to harvest' });
 console.log('FARMSTEAD CORE SLICE 5 PASS');

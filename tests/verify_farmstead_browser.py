@@ -25,13 +25,55 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True, args=["--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
     page = browser.new_page(viewport={"width": 1280, "height": 900}, device_scale_factor=1)
     page.goto(URL)
-    page.wait_for_function("__game.ready && __game.assets.farmer && __game.assets.farm")
+    page.wait_for_function("__game.ready && __game.assets.farmer && __game.assets.farmhouse && __game.assets.scenery")
     assert page.evaluate("[document.title,__game.state,__game.farm.tiles.length,__errors.slice()]") == [
         "Harvest Hollow", "MENU", 30, []
     ]
+    assert page.evaluate("[document.body.dataset.aesthetic,__game.aesthetic,__game.renderScale]") == [
+        "voxel-farm", "voxel-farm", 1
+    ]
+    page.wait_for_function("document.fonts.check('16px \\\"Lilita One\\\"')")
+    assert "Lilita One" in page.evaluate("getComputedStyle(document.body).fontFamily")
+    assert page.evaluate("__game.assets.treeCount") >= 15
+    voxel_contract = page.evaluate("""() => {
+      const grass=__game.scene.getObjectByName('voxel-grass-grid');
+      const path=__game.scene.getObjectByName('voxel-path-blocks');
+      const pond=__game.scene.getObjectByName('voxel-pond');
+      return {grass:grass?.children.reduce((n,m)=>n+m.count,0),grassLayers:grass?.children.length,
+        path:path?.count,pond:pond?.count,
+        grassInstanced:grass?.children.every(m=>m.isInstancedMesh),pathInstanced:path?.isInstancedMesh,pondInstanced:pond?.isInstancedMesh};
+    }""")
+    assert voxel_contract == {
+        "grass": 952, "grassLayers": 4, "path": 18, "pond": 16,
+        "grassInstanced": True, "pathInstanced": True, "pondInstanced": True,
+    }, voxel_contract
+    rendering = page.evaluate("""() => ({
+      cssWidth: document.getElementById('game').clientWidth,
+      bufferWidth: document.getElementById('game').width,
+      layout: __game.layout
+    })""")
+    assert rendering["bufferWidth"] == rendering["cssWidth"], rendering
+    overlap = page.evaluate("""() => {
+      const hit=(a,b)=>a.minX<b.maxX&&a.maxX>b.minX&&a.minZ<b.maxZ&&a.maxZ>b.minZ;
+      return Object.values(__game.layout.buildings).some(b=>__game.layout.paths.some(p=>hit(b,p)));
+    }""")
+    assert overlap is False, rendering
+
+    page.locator("#guide-open").click()
+    assert page.locator("#field-guide").is_visible()
+    assert "HOE" in page.locator("#field-guide").inner_text()
+    page.locator("#guide-close").click()
 
     page.locator("#new-game").click()
     assert page.evaluate("__game.state") == "PLAYING"
+    assert page.locator("#tutorial").is_visible()
+    assert "HOE" in page.locator("#tutorial").inner_text()
+    page.locator("#tutorial-skip").click()
+
+    # The visible Harvest Board control must work through an actual pointer click.
+    page.evaluate("__game.farm.produce.turnip=3; __game.refresh()")
+    page.locator("#deliver-order").click(timeout=2000)
+    assert page.evaluate("[__game.farm.orderIndex,__game.farm.earnings,__game.farm.produce.turnip]") == [1, 35, 0]
 
     # A queued action from an abandoned run must never mutate a newly reset farm.
     page.evaluate("__game.actTile(29)")
@@ -41,9 +83,40 @@ with sync_playwright() as p:
     page.wait_for_timeout(3000)
     assert page.evaluate("[__game.farm.energy,__game.farm.tiles[29].state,__game.selectedTool]") == [14, "grass", "hoe"]
 
+    # Sleeping must cancel movement queued on the previous day.
+    page.evaluate("__game.actTile(28); __game.endDay()")
+    page.wait_for_timeout(3000)
+    assert page.evaluate("[__game.farm.day,__game.farm.energy,__game.farm.tiles[28].state]") == [2, 14, "grass"]
+    page.locator("#pause-toggle").click()
+    page.locator("#pause .menu-return").click()
+    page.locator("#new-game").click()
+    page.locator("#tutorial-skip").click()
+
+    # A queued action keeps the tool selected when the plot was clicked.
+    page.evaluate("__game.selectTool('hoe'); __game.actTile(27); __game.selectTool('water')")
+    page.wait_for_timeout(3000)
+    assert page.evaluate("[__game.farm.tiles[27].state,__game.farm.energy]") == ["tilled", 13]
+    page.locator("#pause-toggle").click()
+    page.locator("#pause .menu-return").click()
+    page.locator("#new-game").click()
+    page.locator("#tutorial-skip").click()
+
     page.wait_for_timeout(200)
     assert page.evaluate("__game.renderer.info.render.calls") < 80
+    animation_before = page.evaluate("""() => {
+      const farmer=__game.scene.getObjectByName('farmer-avatar');
+      const leg=__game.scene.getObjectByName('leg-left');
+      return {x:farmer.position.x,z:farmer.position.z,q:leg.quaternion.toArray()};
+    }""")
     click_tile(page, 0)
+    page.wait_for_timeout(180)
+    animation_after = page.evaluate("""() => {
+      const farmer=__game.scene.getObjectByName('farmer-avatar');
+      const leg=__game.scene.getObjectByName('leg-left');
+      return {x:farmer.position.x,z:farmer.position.z,q:leg.quaternion.toArray()};
+    }""")
+    assert (animation_after["x"], animation_after["z"]) != (animation_before["x"], animation_before["z"])
+    assert animation_after["q"] != animation_before["q"], (animation_before, animation_after)
     page.wait_for_function("__game.farm.tiles[0].state === 'tilled'")
     assert page.evaluate("__game.farm.energy") == 13
 
@@ -75,15 +148,17 @@ with sync_playwright() as p:
       samples.forEach((sample, i) => Object.assign(__game.farm.tiles[i], sample));
       __game.refresh();
     }""")
+    page.wait_for_timeout(200)
+    assert page.evaluate("__game.renderer.info.render.calls") < 80
     page.screenshot(path="/tmp/harvest-hollow-desktop.png")
 
     page.reload()
-    page.wait_for_function("__game.ready && __game.assets.farmer && __game.assets.farm")
+    page.wait_for_function("__game.ready && __game.assets.farmer && __game.assets.farmhouse && __game.assets.scenery")
     assert page.evaluate("[__game.farm.day,__game.farm.coins,__game.farm.earnings,__errors.slice()]") == [2, 78, 18, []]
 
     page.set_viewport_size({"width": 390, "height": 844})
     page.goto(URL)
-    page.wait_for_function("__game.ready && __game.assets.farmer && __game.assets.farm")
+    page.wait_for_function("__game.ready && __game.assets.farmer && __game.assets.farmhouse && __game.assets.scenery")
     page.locator("#start").click()
     assert page.evaluate("__game.state") == "PLAYING"
     mobile = page.evaluate("""() => {

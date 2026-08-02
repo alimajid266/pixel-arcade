@@ -83,9 +83,9 @@ It includes:
 
 ### Harvest Hollow
 
-Harvest Hollow is a compact farming simulator rendered with an orthographic Three.js camera. The player tills a 30-plot field, plants and waters crops, sleeps to advance growth, sells produce, and completes rotating market requests. Carrots unlock on day 2 and pumpkins on day 4; earning 350 coins restores the windmill, after which farming continues indefinitely.
+Harvest Hollow is a compact farming simulator rendered as a bold, candy-colored voxel diorama with an orthographic Three.js camera. The player tills a 30-plot field, plants and waters crops, sleeps to advance growth, sells produce, and completes rotating market requests. Carrots unlock on day 2 and pumpkins on day 4; earning 350 coins restores the windmill, after which farming continues indefinitely.
 
-It includes an animated licensed farmer, a licensed low-poly farm environment, three crops with different growth/economy profiles, deterministic rainy days, keyboard/touch plot interaction, guarded local save recovery, synthesized feedback audio, pause, and desktop/portrait-phone layouts.
+It includes a blocky CC0 Kenney character with procedural limb animation, cohesive CC0 suburban scenery, checkerboard voxel terrain, first-run onboarding and a persistent Field Guide, three crops with different growth/economy profiles, deterministic rainy days, keyboard/touch plot interaction, guarded local save recovery, synthesized feedback audio, pause, and desktop/portrait-phone layouts.
 
 ---
 
@@ -178,7 +178,7 @@ It includes an animated licensed farmer, a licensed low-poly farm environment, t
 - Turnips (`1` watered day), carrots (`2`), and pumpkins (`3`) with distinct seed and sale prices.
 - Day progression, deterministic rain every third day, seed unlocks, produce sales, rotating market requests, and a 350-coin restoration goal followed by endless play.
 - Browser-local save persistence with bounded normalization of malformed values.
-- Licensed animated farmer and farm models, locally vendored with attribution and hashes.
+- Licensed animated farmer and modular farm scenery, locally vendored with attribution and hashes.
 
 **Out of scope**
 
@@ -249,6 +249,7 @@ PIP cannot hop outside the seven-cell lateral boundary, below the starting row, 
 | Buy seed / sell basket / deliver request | Corresponding DOM button |
 | Advance crop growth | `Sleep / Next Day` after watering |
 | Pause / resume | `P`, `Escape`, the `Ⅱ` control, or Resume |
+| Read instructions | `? Field Guide` at any time; a five-step guide also opens on New Farm |
 
 ---
 
@@ -297,7 +298,7 @@ The games preserve fixed logical worlds while scaling their displayed Canvas:
 | Flappy Canvas | `400 × 600` |
 | Zombie Defense | `800 × 650` |
 | Road Hop | viewport-sized WebGL buffer, capped at `1×` device pixel ratio |
-| Harvest Hollow | viewport-sized orthographic WebGL buffer, capped at `1×` device pixel ratio |
+| Harvest Hollow | orthographic WebGL buffer at full CSS viewport dimensions, capped at `1×` pixel ratio |
 
 Zombie Defense uses a `20 × 12` battlefield grid with `40px` logical cells. Its top `480px` is the build grid, `500px` is the playable world area, and the remaining space is the HUD.
 
@@ -694,9 +695,9 @@ The request board cycles through three deliveries: three turnips for 35 coins, t
 
 ### Rendering, assets, and persistence
 
-The orthographic camera keeps all 30 plots readable while retaining real 3D depth. The animated farmer is “Farmer” by Quaternius (CC0), and the barn/fence environment is “Farm” by Poly by Google (CC BY 3.0). Exact source links, attribution, local filenames, and SHA-256 hashes are recorded in `farmstead/ASSET-LICENSES.md`. Crop models, paths, pond border, plots, and the restoration windmill are original game geometry. The static farm model is merged by material after loading, reducing the representative scene to 68 draw calls, 38 retained geometries, and about 11,500 triangles. Rendering disables multisample antialiasing and caps device pixel ratio at `1×` to favor stable low-end performance.
+The orthographic camera keeps all 30 plots readable while retaining real 3D depth. The blocky farmer comes from Kenney's CC0 Blocky Characters pack; the farmhouse, fences, trees, stepping stones, and planters come from Kenney's CC0 City Kit (Suburban). The farmhouse uses a documented local coral-roof texture derivative. Lilita One is vendored under the SIL Open Font License 1.1 for the game-style HUD, menus, tutorial, and Field Guide. Exact source links, local filenames, licenses, transformations, and SHA-256 hashes are recorded in `farmstead/ASSET-LICENSES.md`. Checkerboard terrain, voxel crops, path and pond blocks, the market stall, farmer accessories, and the restoration windmill are original game geometry. Rendering disables multisample antialiasing, draws at full CSS viewport dimensions with a `1×` pixel-ratio cap, uses instancing and merged repeated scenery, and remains under the representative 80-draw-call browser budget.
 
-`pixelArcade.harvestHollow.v1` stores day, currency, energy, seed/produce inventories, earnings, request index, and all 30 plot states. Loading clamps numeric ranges, validates crop/state identifiers, requires the exact tile count, and falls back to a new farm when storage or JSON parsing fails. The debug handle exposes state for local tests but does not make local state authoritative or secure.
+`pixelArcade.harvestHollow.v1` stores day, currency, energy, seed/produce inventories, earnings, request index, and all 30 plot states. Loading requires save schema version 1, clamps numeric ranges, derives harvest readiness from validated growth, validates crop/state identifiers, requires the exact tile count, and falls back to a new farm when storage or JSON parsing fails. The debug handle exposes state for local tests but does not make local state authoritative or secure.
 
 ---
 
@@ -746,7 +747,7 @@ pixel-arcade/
 │   ├── game.js                        # Orthographic scene, assets, input, audio
 │   ├── farm-core.mjs                  # Pure crop/economy/save model
 │   ├── ASSET-LICENSES.md              # Model sources, licenses, and hashes
-│   └── assets/                        # Licensed farmer and farm GLB files
+│   └── assets/                        # Licensed voxel models, textures, and local game font
 ├── vendor/
 │   ├── three.module.min.js            # Pinned Three.js r170 module
 │   ├── GLTFLoader.js                  # Matching locally patched GLB loader
@@ -771,7 +772,8 @@ pixel-arcade/
 │   ├── verify_road_hop_review_regressions.py # Save, daily, reward, and deterministic regressions
 │   ├── verify_road_hop_playtest_corrections.py # Performance, Haunted, framing, and PIP contracts
 │   ├── verify_road_hop_expansion_mobile.py # Phone controls, panels, and Rally swipe
-│   ├── farmstead_core.mjs             # Crop, economy, request, and save assertions
+│   ├── farmstead_core.mjs             # Focused crop, economy, request, and save assertions
+│   ├── farmstead_core_thorough.mjs    # 15-scenario state-machine and economy regression suite
 │   ├── verify_farmstead_source.py     # Local assets/imports/integration contract
 │   ├── verify_farmstead_browser.py    # Chromium WebGL interaction and mobile QA
 │   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks

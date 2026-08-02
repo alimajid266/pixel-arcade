@@ -1,25 +1,55 @@
 # Harvest Hollow asset licenses
 
-Harvest Hollow vendors its runtime dependencies and models locally so the game does not depend on a CDN.
+Harvest Hollow vendors its runtime dependencies and selected game assets locally so the deployed game has no CDN or third-party runtime dependency.
 
-## Farmer
+## Kenney Blocky Characters 2.0
 
-- **Title:** Farmer
-- **Creator:** Quaternius
-- **Source:** https://poly.pizza/m/7pn3R6hPvE
-- **License:** CC0 1.0 Universal
-- **Local file:** `assets/farmer.glb`
-- **SHA-256:** `f7ae6e2596c6521d296fa5948783f1dac717807456ce5355e48719e81d15e9a6`
+- **Creator:** Kenney
+- **Source:** https://kenney.nl/assets/blocky-characters
+- **License:** Creative Commons Zero 1.0 Universal (CC0)
+- **License deed:** https://creativecommons.org/publicdomain/zero/1.0/
+- **Use in Harvest Hollow:** blocky farmer character; a separately authored voxel straw hat and hoe are attached at runtime
+- **Runtime treatment:** nearest-neighbor texture filtering, role-appropriate scale, and procedural limb animation using the model's authored limb nodes
 
-## Farm environment
+| Local file | SHA-256 |
+|---|---|
+| `assets/voxel/character-a.glb` | `8ee5dae167ec589863f6bba222467eb90ace8be357a4c5abfcab289290181616` |
+| `assets/voxel/Textures/texture-a.png` | `257e944c582ce7cda206fbd8ceb717be648f9721756baf377a36478c11c0059a` |
 
-- **Title:** Farm
-- **Creator:** Poly by Google
-- **Source:** https://poly.pizza/m/8n7KSxtET9J
-- **License:** Creative Commons Attribution 3.0
-- **Attribution:** “Farm” by Poly by Google, used under CC BY 3.0.
-- **Local file:** `assets/farm.glb`
-- **SHA-256:** `a01fa134bd97ece0684615583420eb36ea14935d206cd99f60e1c7aa6ab28c33`
+## Kenney City Kit (Suburban) 2.0
+
+- **Creator:** Kenney
+- **Source:** https://kenney.nl/assets/city-kit-suburban
+- **License:** Creative Commons Zero 1.0 Universal (CC0)
+- **License deed:** https://creativecommons.org/publicdomain/zero/1.0/
+- **Use in Harvest Hollow:** farmhouse, fences, trees, path stones, and planters
+- **Runtime treatment:** models are normalized, positioned in the authored farm layout, rendered with nearest-neighbor texture filtering, and repeated scenery is merged by material to limit draw calls
+- **Farmhouse color derivative:** `housemap.png` is a local derivative of Kenney's `colormap.png`. Green roof pixels were remapped to a coral/red palette for visual separation from the grass. The building GLB's equal-length external texture URI was changed from `Textures/colormap.png` to `Textures/housemap.png`; geometry and UVs are unchanged.
+
+| Local file | SHA-256 |
+|---|---|
+| `assets/voxel/building-type-n.glb` | `2a371632ed4a50a5c9c7b4b7087e41f0c0989457c20481b4106291ab05603e62` |
+| `assets/voxel/fence-1x4.glb` | `f63d17e1bb8f83416cffefdc0a90615ddd5b2cb69d8ea721cebdd663f9b2c4fc` |
+| `assets/voxel/tree-large.glb` | `16d1f95c149bc727a953a473cf20bf21de9bf1a88747c4f9d2eeb4ac7d43e291` |
+| `assets/voxel/tree-small.glb` | `5f63359e5f392609d7617cc98070855ca1ffd4f4b4bc3978a5ff56ece88a58d6` |
+| `assets/voxel/path-stones-long.glb` | `cbd73ca5746f2290f44a2e1fc6f0759076c2c5fcdb3cb3f1e3acd74d5751d114` |
+| `assets/voxel/planter.glb` | `a876e87d908f0397dcaf94b7705835447825c4c5b39195319535415386542c17` |
+| `assets/voxel/Textures/colormap.png` | `9b5de86078c25ef02351a80d35ff3c978693a1044565b73eedd9ae9b5b80665d` |
+| `assets/voxel/Textures/housemap.png` | `7fb6ea5325d93e5f3f8567a397b7b6dd09d7e43ceeff1fc071076b615f781f86` |
+
+## Lilita One font
+
+- **Designer:** Juan Montoreano
+- **Distribution:** Google Fonts
+- **Source:** https://github.com/google/fonts/tree/main/ofl/lilitaone
+- **License:** SIL Open Font License 1.1
+- **Use in Harvest Hollow:** locally vendored game-style UI typography for headings, buttons, HUD labels, tutorial text, and the Field Guide
+- **Runtime treatment:** loaded from the same origin through CSS `@font-face`; the system sans-serif stack remains the loading fallback
+
+| Local file | SHA-256 |
+|---|---|
+| `assets/fonts/LilitaOne-Regular.ttf` | `f5b641c45c69d772ee4eda687bc9fda411d5cad6b0b45371491da4580cbc8d59` |
+| `assets/fonts/OFL.txt` | `9c14147639ea90cfa41b0645c77b4fa642494d11696e2a9f5cd2d9b5843c1a6e` |
 
 ## Three.js
 
@@ -38,4 +68,6 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-The field plots, crops, pond border, paths, and restoration windmill are original game geometry assembled specifically for Harvest Hollow. No models, code, maps, names, or artwork were copied from another farming game.
+## Original Harvest Hollow art
+
+The checkerboard voxel terrain, 30 plot blocks, crop growth meshes, voxel pond, path blocks, market stall, windmill assembly, farmer straw hat, and farmer hoe were authored specifically for Harvest Hollow. The visual direction uses broad qualities of colorful voxel games; no protected models, textures, characters, maps, names, code, branding, or exact designs were copied from Crossy Road, Stardew Valley, or another farming game.

@@ -22,55 +22,82 @@ let state = 'MENU';
 let selectedTool = 'hoe';
 let selectedIndex = 0;
 let queuedIndex = null;
+let queuedTool = null;
 let messageTimer = 0;
 let completionShown = farm.earnings >= 350;
 let audioContext = null;
+const VOXEL_WORLD = true;
+const RENDER_SCALE = 1;
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.setClearColor(0x9fd7b5);
+renderer.setClearColor(0x83dff0);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9fd7b5);
-scene.fog = new THREE.Fog(0x9fd7b5, 24, 46);
+scene.background = new THREE.Color(0x83dff0);
+scene.fog = new THREE.Fog(0x83dff0, 34, 55);
 const camera = new THREE.OrthographicCamera(-12, 12, 8, -8, 0.1, 100);
-camera.position.set(17, 19, 20);
-camera.lookAt(0, 0, 1);
-scene.add(new THREE.HemisphereLight(0xfff1c9, 0x315f3f, 2.1));
-const sun = new THREE.DirectionalLight(0xffe5ad, 2.4);
+camera.position.set(18, 21, 22);
+camera.lookAt(0, 0, 0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x274f68, 0.72));
+const sun = new THREE.DirectionalLight(0xffe1a8, 1.18);
 sun.position.set(-8, 18, 10);
 scene.add(sun);
 
 const mats = {
-  grass: new THREE.MeshStandardMaterial({ color: 0x78b957, roughness: 1 }),
-  grassLight: new THREE.MeshStandardMaterial({ color: 0x91cb66, roughness: 1 }),
-  soil: new THREE.MeshStandardMaterial({ color: 0x8b5a3c, roughness: 1 }),
-  wetSoil: new THREE.MeshStandardMaterial({ color: 0x594633, roughness: 0.78 }),
-  path: new THREE.MeshStandardMaterial({ color: 0xd8b876, roughness: 1 }),
-  water: new THREE.MeshStandardMaterial({ color: 0x5db5d5, roughness: 0.25, transparent: true, opacity: 0.88 }),
-  wood: new THREE.MeshStandardMaterial({ color: 0x7b4c34, roughness: 1 }),
-  cream: new THREE.MeshStandardMaterial({ color: 0xf2dfb2, roughness: 1 }),
-  red: new THREE.MeshStandardMaterial({ color: 0xb9503d, roughness: 0.85 }),
-  leaf: new THREE.MeshStandardMaterial({ color: 0x4e983d, roughness: 1 }),
-  turnip: new THREE.MeshStandardMaterial({ color: 0xf2e8dc, roughness: 0.9 }),
-  carrot: new THREE.MeshStandardMaterial({ color: 0xee7b25, roughness: 0.9 }),
-  pumpkin: new THREE.MeshStandardMaterial({ color: 0xe96824, roughness: 0.9 }),
+  grass: new THREE.MeshLambertMaterial({ color: 0x51d957, flatShading: true }),
+  grassLight: new THREE.MeshLambertMaterial({ color: 0x72ef65, flatShading: true }),
+  soil: new THREE.MeshLambertMaterial({ color: 0xb95d43, flatShading: true }),
+  wetSoil: new THREE.MeshLambertMaterial({ color: 0x713b41, flatShading: true }),
+  path: new THREE.MeshLambertMaterial({ color: 0xffcc55, flatShading: true }),
+  water: new THREE.MeshLambertMaterial({ color: 0x2fcbd5, transparent: true, opacity: 0.94, flatShading: true }),
+  wood: new THREE.MeshLambertMaterial({ color: 0x70415a, flatShading: true }),
+  cream: new THREE.MeshLambertMaterial({ color: 0xffe4a8, flatShading: true }),
+  red: new THREE.MeshLambertMaterial({ color: 0xf04f61, flatShading: true }),
+  leaf: new THREE.MeshLambertMaterial({ color: 0x168f62, flatShading: true }),
+  turnip: new THREE.MeshLambertMaterial({ color: 0xf7efff, flatShading: true }),
+  carrot: new THREE.MeshLambertMaterial({ color: 0xff7a35, flatShading: true }),
+  pumpkin: new THREE.MeshLambertMaterial({ color: 0xff9f2f, flatShading: true }),
   highlight: new THREE.MeshBasicMaterial({ color: 0xffe47a, transparent: true, opacity: 0.72, side: THREE.DoubleSide }),
 };
 const geometries = {
   tile: new THREE.BoxGeometry(1.42, 0.18, 1.42),
-  leaf: new THREE.ConeGeometry(0.11, 0.42, 5),
-  turnip: new THREE.SphereGeometry(0.22, 8, 6),
-  carrot: new THREE.ConeGeometry(0.16, 0.42, 7),
-  pumpkin: new THREE.SphereGeometry(0.27, 10, 6),
+  leaf: new THREE.BoxGeometry(0.12, 0.4, 0.1),
+  turnip: new THREE.BoxGeometry(0.4, 0.32, 0.4),
+  carrot: new THREE.BoxGeometry(0.24, 0.46, 0.24),
+  pumpkin: new THREE.BoxGeometry(0.52, 0.38, 0.52),
 };
 
 const world = new THREE.Group();
 scene.add(world);
-const ground = new THREE.Mesh(new THREE.BoxGeometry(28, 0.8, 22), mats.grass);
-ground.position.y = -0.48;
+const ground = new THREE.Mesh(new THREE.BoxGeometry(60, 0.8, 50), new THREE.MeshLambertMaterial({ color: 0x258c4d }));
+ground.position.y = -0.62;
 world.add(ground);
+
+const grassGeometry = new THREE.BoxGeometry(1.02, 0.26, 1.02);
+const grassGrid = new THREE.Group();
+grassGrid.name = 'voxel-grass-grid';
+const voxelMatrix = new THREE.Matrix4();
+const grassPalette = [0x4ed45b, 0x5be367, 0x45c95a, 0x67ec72];
+const grassPositions = grassPalette.map(() => []);
+for (let z = -14; z < 14; z++) {
+  for (let x = -17; x < 17; x++) {
+    const colorIndex = Math.abs((x * 13 + z * 7 + x * z) % grassPalette.length);
+    grassPositions[colorIndex].push([x + 0.5, -0.15, z + 0.5]);
+  }
+}
+grassPositions.forEach((positions, colorIndex) => {
+  const mesh = new THREE.InstancedMesh(grassGeometry, new THREE.MeshBasicMaterial({ color: grassPalette[colorIndex] }), positions.length);
+  mesh.name = `voxel-grass-color-${colorIndex}`;
+  positions.forEach(([x, y, z], index) => {
+    voxelMatrix.makeTranslation(x, y, z);
+    mesh.setMatrixAt(index, voxelMatrix);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  grassGrid.add(mesh);
+});
+world.add(grassGrid);
 
 function box(w, h, d, material, x, y, z) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
@@ -79,26 +106,46 @@ function box(w, h, d, material, x, y, z) {
   return mesh;
 }
 
-box(3.2, 0.12, 17, mats.path, -6.1, 0.01, 0.8);
-box(12, 0.1, 2.2, mats.path, -0.4, 0.02, -6.5);
-const pond = new THREE.Mesh(new THREE.CylinderGeometry(2.15, 2.4, 0.12, 18), mats.water);
-pond.position.set(8.7, 0.02, 5.7);
-world.add(pond);
-for (let i = 0; i < 13; i++) {
-  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22 + (i % 3) * 0.07, 0), new THREE.MeshStandardMaterial({ color: i % 2 ? 0x819173 : 0x718169, roughness: 1 }));
-  const angle = i / 13 * Math.PI * 2;
-  rock.position.set(8.7 + Math.cos(angle) * 2.35, 0.12, 5.7 + Math.sin(angle) * 2.35);
-  rock.scale.y = 0.65;
-  world.add(rock);
-}
+const pathCells = [];
+for (let x = -4; x <= 6; x++) pathCells.push([x, -2]);
+for (let z = -1; z <= 5; z++) pathCells.push([6, z]);
+const pathBlocks = new THREE.InstancedMesh(new THREE.BoxGeometry(1.04, 0.22, 1.04), mats.path, pathCells.length);
+pathBlocks.name = 'voxel-path-blocks';
+pathCells.forEach(([x, z], index) => {
+  voxelMatrix.makeTranslation(x, 0.08 + (index % 2) * 0.012, z);
+  pathBlocks.setMatrixAt(index, voxelMatrix);
+});
+pathBlocks.instanceMatrix.needsUpdate = true;
+world.add(pathBlocks);
+const layout = Object.freeze({
+  buildings: Object.freeze({
+    farmhouse: Object.freeze({ minX: -9.5, maxX: -5.25, minZ: -2.4, maxZ: 2.0 }),
+    windmill: Object.freeze({ minX: 6.8, maxX: 10.0, minZ: -4.2, maxZ: -0.2 }),
+    market: Object.freeze({ minX: 6.9, maxX: 10.0, minZ: 4.0, maxZ: 7.0 }),
+  }),
+  paths: Object.freeze([
+    Object.freeze({ minX: -4.52, maxX: 6.52, minZ: -2.52, maxZ: -1.48 }),
+    Object.freeze({ minX: 5.48, maxX: 6.52, minZ: -1.52, maxZ: 5.52 }),
+  ]),
+});
+const waterCells = [];
+for (let z = 4; z <= 7; z++) for (let x = -10; x <= -6; x++) if (!((x === -10 || x === -6) && (z === 4 || z === 7))) waterCells.push([x, z]);
+const voxelPond = new THREE.InstancedMesh(new THREE.BoxGeometry(1.02, 0.12, 1.02), mats.water, waterCells.length);
+voxelPond.name = 'voxel-pond';
+waterCells.forEach(([x, z], index) => {
+  voxelMatrix.makeTranslation(x, 0.05, z);
+  voxelPond.setMatrixAt(index, voxelMatrix);
+});
+voxelPond.instanceMatrix.needsUpdate = true;
+world.add(voxelPond);
 
 const tileGroups = [];
 const tileHitMeshes = [];
 const FIELD_COLS = 6;
 const FIELD_ROWS = 5;
 const TILE = 1.55;
-const FIELD_X = 1.0;
-const FIELD_Z = 1.0;
+const FIELD_X = 1.5;
+const FIELD_Z = 1.9;
 for (let row = 0; row < FIELD_ROWS; row++) {
   for (let col = 0; col < FIELD_COLS; col++) {
     const index = row * FIELD_COLS + col;
@@ -124,7 +171,8 @@ function addLeaves(group, height, scale = 1) {
   for (let i = 0; i < 3; i++) {
     const leaf = new THREE.Mesh(geometries.leaf, mats.leaf);
     leaf.position.set(Math.cos(i * 2.094) * 0.09, height, Math.sin(i * 2.094) * 0.09);
-    leaf.rotation.z = (i - 1) * 0.35;
+    leaf.rotation.z = (i - 1) * 0.55;
+    leaf.rotation.y = i * 2.094;
     leaf.scale.setScalar(scale);
     group.add(leaf);
   }
@@ -144,21 +192,19 @@ function buildCrop(tile, group) {
   } else if (tile.crop === 'carrot') {
     const root = new THREE.Mesh(geometries.carrot, mats.carrot);
     root.position.y = 0.33;
-    root.rotation.x = Math.PI;
     crop.add(root);
     addLeaves(crop, 0.55, 0.7);
   } else {
     const fruit = new THREE.Mesh(geometries.pumpkin, mats.pumpkin);
     fruit.position.y = 0.27;
-    fruit.scale.y = 0.72;
     crop.add(fruit);
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.2, 5), mats.leaf);
+    const stem = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), mats.leaf);
     stem.position.y = 0.5;
     crop.add(stem);
   }
   crop.scale.setScalar(scale);
   if (tile.ready) {
-    const glow = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.4, 16), new THREE.MeshBasicMaterial({ color: 0xffe36e, transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
+    const glow = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.43, 4), new THREE.MeshBasicMaterial({ color: 0xffe36e, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
     glow.rotation.x = -Math.PI / 2;
     glow.position.y = 0.2;
     glow.userData.readyGlow = true;
@@ -180,19 +226,27 @@ function refreshTiles() {
 }
 
 const windmill = new THREE.Group();
-windmill.position.set(-8.4, 0, 4.8);
-const tower = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.45, 4.2, 8), mats.cream);
-tower.position.y = 2.1;
+windmill.position.set(8.35, 0, -2.25);
+const tower = new THREE.Mesh(new THREE.BoxGeometry(2.4, 3.5, 2.35), mats.cream);
+tower.position.y = 1.75;
 windmill.add(tower);
-const roof = new THREE.Mesh(new THREE.ConeGeometry(1.35, 1.5, 8), mats.red);
-roof.position.y = 4.55;
+const roof = new THREE.Mesh(new THREE.BoxGeometry(2.75, 0.72, 2.7), mats.red);
+roof.position.y = 3.86;
 windmill.add(roof);
+const millDoor = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1.25, 0.16), mats.wood);
+millDoor.position.set(-0.48, 0.7, 1.24);
+windmill.add(millDoor);
+const millWindow = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.58, 0.17), new THREE.MeshLambertMaterial({ color: 0x32cbd8 }));
+millWindow.position.set(0.52, 2.1, 1.25);
+windmill.add(millWindow);
 const hub = new THREE.Group();
-hub.position.set(0, 3.45, 1.18);
+hub.position.set(0, 2.95, 1.35);
 hub.rotation.y = Math.PI;
+const hubCap = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.58, 0.32), new THREE.MeshLambertMaterial({ color: 0xffc83d }));
+hub.add(hubCap);
 for (let i = 0; i < 4; i++) {
-  const sail = new THREE.Mesh(new THREE.BoxGeometry(0.28, 2.6, 0.12), mats.wood);
-  sail.position.y = 1.2;
+  const sail = new THREE.Mesh(new THREE.BoxGeometry(0.34, 2.25, 0.16), i % 2 ? mats.wood : mats.red);
+  sail.position.y = 1.02;
   const arm = new THREE.Group();
   arm.rotation.z = i * Math.PI / 2;
   arm.add(sail);
@@ -202,14 +256,29 @@ windmill.add(hub);
 world.add(windmill);
 
 const farmerRoot = new THREE.Group();
+farmerRoot.name = 'farmer-avatar';
 farmerRoot.position.set(-1.5, 0.1, -3.8);
+farmerRoot.rotation.y = Math.PI;
 world.add(farmerRoot);
+const hatBrimGeometry = new THREE.BoxGeometry(0.82, 0.09, 0.72);
+const hatCrownGeometry = new THREE.BoxGeometry(0.48, 0.25, 0.46);
+hatCrownGeometry.translate(0, 0.16, 0);
+const strawHat = new THREE.Mesh(mergeGeometries([hatBrimGeometry, hatCrownGeometry]), new THREE.MeshLambertMaterial({ color: 0xffc83d, flatShading: true }));
+hatBrimGeometry.dispose();
+hatCrownGeometry.dispose();
+strawHat.position.y = 1.67;
+farmerRoot.add(strawHat);
 let farmerModel = null;
 let mixer = null;
 let idleAction = null;
 let walkAction = null;
 let interactAction = null;
-const assets = { farmer: false, farm: false };
+let voxelLegLeft = null;
+let voxelLegRight = null;
+let voxelArmLeft = null;
+let voxelArmRight = null;
+let voxelWalkPhase = 0;
+const assets = { farmer: false, farmhouse: false, scenery: false, treeCount: 0 };
 
 function normalizedModel(sceneRoot, targetHeight) {
   const bounds = new THREE.Box3().setFromObject(sceneRoot);
@@ -224,10 +293,38 @@ function normalizedModel(sceneRoot, targetHeight) {
   return sceneRoot;
 }
 
+const loader = new GLTFLoader();
+const voxel = name => `./assets/voxel/${name}.glb`;
+const staticArt = new THREE.Group();
+world.add(staticArt);
+
+function voxelMaterials(root) {
+  root.traverse(node => {
+    if (!node.isMesh) return;
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    for (const material of materials) {
+      if (material.map) {
+        material.map.magFilter = THREE.NearestFilter;
+        material.map.minFilter = THREE.NearestMipmapNearestFilter;
+        material.map.colorSpace = THREE.SRGBColorSpace;
+      }
+      material.roughness = 1;
+    }
+  });
+  return root;
+}
+
+function placeModel(source, height, x, z, rotation = 0, y = 0) {
+  const model = normalizedModel(voxelMaterials(source.clone()), height);
+  model.position.set(x, y, z);
+  model.rotation.y = rotation;
+  staticArt.add(model);
+  return model;
+}
+
 function flattenStaticModel(root) {
   root.updateMatrixWorld(true);
   const buckets = new Map();
-  const sourceGeometries = new Set();
   root.traverse(node => {
     if (!node.isMesh || node.isSkinnedMesh || Array.isArray(node.material)) return;
     const geometry = node.geometry.clone();
@@ -235,60 +332,117 @@ function flattenStaticModel(root) {
     const key = node.material.uuid;
     if (!buckets.has(key)) buckets.set(key, { material: node.material, geometries: [] });
     buckets.get(key).geometries.push(geometry);
-    sourceGeometries.add(node.geometry);
   });
-
   const flattened = new THREE.Group();
   for (const { material, geometries } of buckets.values()) {
     const merged = mergeGeometries(geometries, false);
     if (merged) flattened.add(new THREE.Mesh(merged, material));
     geometries.forEach(geometry => geometry.dispose());
   }
-  sourceGeometries.forEach(geometry => geometry.dispose());
   return flattened;
 }
 
-const loader = new GLTFLoader();
-loader.load('./assets/farmer.glb', gltf => {
-  farmerModel = normalizedModel(gltf.scene, 1.7);
-  farmerRoot.add(farmerModel);
-  mixer = new THREE.AnimationMixer(farmerModel);
-  const findClip = name => gltf.animations.find(clip => clip.name.endsWith(`|${name}`));
-  const idle = findClip('Idle') || findClip('Idle_Neutral');
-  const walk = findClip('Walk') || findClip('Run');
-  const interact = findClip('Interact');
-  if (idle) idleAction = mixer.clipAction(idle).play();
-  if (walk) walkAction = mixer.clipAction(walk);
-  if (interact) {
-    interactAction = mixer.clipAction(interact);
-    interactAction.setLoop(THREE.LoopOnce, 1);
-    interactAction.clampWhenFinished = true;
-  }
-  assets.farmer = true;
-  updateDebug();
-}, undefined, error => {
-  window.__errors.push(`Farmer asset: ${error.message || error}`);
-});
+async function loadVoxelFarm() {
+  try {
+    const [character, houseArt, fenceArt, treeLargeArt, treeSmallArt, pathStoneArt, planterArt] = await Promise.all([
+      loader.loadAsync(voxel('character-a')),
+      loader.loadAsync(voxel('building-type-n')),
+      loader.loadAsync(voxel('fence-1x4')),
+      loader.loadAsync(voxel('tree-large')),
+      loader.loadAsync(voxel('tree-small')),
+      loader.loadAsync(voxel('path-stones-long')),
+      loader.loadAsync(voxel('planter')),
+    ]);
 
-loader.load('./assets/farm.glb', gltf => {
-  const source = normalizedModel(gltf.scene, 3.8);
-  source.position.x += -6.6;
-  source.position.z += -4.8;
-  source.rotation.y = Math.PI * 0.12;
-  const farmArt = flattenStaticModel(source);
-  world.add(farmArt);
-  assets.farm = true;
-  updateDebug();
-}, undefined, error => {
-  window.__errors.push(`Farm asset: ${error.message || error}`);
-});
+    farmerModel = normalizedModel(voxelMaterials(character.scene), 1.82);
+    farmerRoot.add(farmerModel);
+    voxelLegLeft = farmerModel.getObjectByName('leg-left');
+    voxelLegRight = farmerModel.getObjectByName('leg-right');
+    voxelArmLeft = farmerModel.getObjectByName('arm-left');
+    voxelArmRight = farmerModel.getObjectByName('arm-right');
+    mixer = new THREE.AnimationMixer(farmerModel);
+    const findClip = names => character.animations.find(clip => names.includes(clip.name.toLowerCase()));
+    const idle = findClip(['idle', 'static']);
+    const walk = findClip(['walk', 'sprint']);
+    const interact = findClip(['interact-right', 'interact-left', 'pick-up']);
+    if (idle) idleAction = mixer.clipAction(idle).play();
+    if (walk) walkAction = mixer.clipAction(walk);
+    if (interact) {
+      interactAction = mixer.clipAction(interact);
+      interactAction.setLoop(THREE.LoopOnce, 1);
+      interactAction.clampWhenFinished = true;
+    }
+    const hoe = new THREE.Group();
+    const hoeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.86, 0.09), mats.wood);
+    const hoeHead = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.13, 0.14), new THREE.MeshLambertMaterial({ color: 0x495a78 }));
+    hoeHead.position.y = 0.42;
+    hoe.add(hoeHandle, hoeHead);
+    hoe.position.set(0.45, 0.7, 0.02);
+    hoe.rotation.z = -0.58;
+    farmerRoot.add(hoe);
+    assets.farmer = true;
+
+    const house = normalizedModel(voxelMaterials(houseArt.scene), 4.25);
+    house.position.set(-7.35, 0.02, -0.2);
+    house.rotation.y = Math.PI * 0.12;
+    staticArt.add(house);
+    assets.farmhouse = true;
+
+    const scenery = [
+      [treeLargeArt.scene, 3.8, -12.8, -7.2, 0.2], [treeSmallArt.scene, 2.6, -11.8, -3.7, -0.3],
+      [treeLargeArt.scene, 4.2, -12.1, 0.5, 0.5], [treeSmallArt.scene, 2.7, -12.8, 4.2, 0.1],
+      [treeLargeArt.scene, 4.0, -12.2, 9.0, -0.4], [treeSmallArt.scene, 2.8, 12.4, -7.3, 0.25],
+      [treeLargeArt.scene, 4.1, 12.5, -3.5, -0.2], [treeSmallArt.scene, 2.7, 12.1, 1.1, 0.45],
+      [treeLargeArt.scene, 3.9, 12.6, 6.7, -0.35], [pathStoneArt.scene, 0.16, -4.95, -2.0, Math.PI / 2],
+      [pathStoneArt.scene, 0.16, 6.1, 6.0, 0], [planterArt.scene, 0.65, -5.35, 0.9, 0],
+      [planterArt.scene, 0.72, 7.25, 5.8, Math.PI / 2],
+      [treeLargeArt.scene, 3.7, -8.7, -8.9, 0.15], [treeSmallArt.scene, 2.6, -5.7, -9.5, -0.2],
+      [treeLargeArt.scene, 3.9, -2.6, -9.8, 0.35], [treeSmallArt.scene, 2.7, 1.0, -10.2, -0.4],
+      [treeLargeArt.scene, 4.0, 4.8, -9.7, 0.1], [treeSmallArt.scene, 2.8, 8.7, -9.1, -0.25],
+    ];
+    assets.treeCount = scenery.filter(([model]) => model === treeLargeArt.scene || model === treeSmallArt.scene).length;
+    for (const [model, height, x, z, rotation] of scenery) placeModel(model, height, x, z, rotation, 0.02);
+    for (const x of [-9.0, -7.6, -6.2]) placeModel(fenceArt.scene, 0.62, x, 2.0, 0);
+    for (const z of [-1.5, 0.0]) placeModel(fenceArt.scene, 0.62, -9.7, z, Math.PI / 2);
+
+    const market = new THREE.Group();
+    market.position.set(8.2, 0, 5.4);
+    const marketCounter = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.0, 1.35), mats.wood);
+    marketCounter.position.y = 0.5;
+    const marketCanopy = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.45, 2.2), mats.red);
+    marketCanopy.position.y = 2.35;
+    const marketPostGeometry = new THREE.BoxGeometry(0.18, 1.9, 0.18);
+    const marketPosts = new THREE.InstancedMesh(marketPostGeometry, mats.cream, 4);
+    let postIndex = 0;
+    for (const x of [-1.2, 1.2]) for (const z of [-0.65, 0.65]) {
+      voxelMatrix.makeTranslation(x, 1.42, z);
+      marketPosts.setMatrixAt(postIndex++, voxelMatrix);
+    }
+    marketPosts.instanceMatrix.needsUpdate = true;
+    market.add(marketPosts);
+    market.add(marketCounter, marketCanopy);
+    world.add(market);
+
+    const flattenedScenery = flattenStaticModel(staticArt);
+    world.remove(staticArt);
+    world.add(flattenedScenery);
+    assets.scenery = true;
+    updateDebug();
+  } catch (error) {
+    window.__errors.push(`Voxel asset: ${error.message || error}`);
+  }
+}
+loadVoxelFarm();
 
 function updateWindmill() {
   const progress = clamp(farm.earnings / 350, 0, 1);
   tower.material = mats.cream;
   roof.visible = true;
   hub.visible = true;
-  hub.children.forEach((arm, index) => { arm.visible = index === 0 || progress >= (index + 1) / 4; });
+  hub.children.forEach((part, index) => {
+    if (index === 0) part.visible = true;
+    else part.visible = index <= 2 || progress >= index / 4;
+  });
   windmill.scale.setScalar(0.92 + progress * 0.08);
 }
 
@@ -367,9 +521,9 @@ function setAnimation(next) {
   }
 }
 
-function performAction(index) {
-  const tool = ['turnip', 'carrot', 'pumpkin'].includes(selectedTool) ? 'seed' : selectedTool;
-  const crop = tool === 'seed' ? selectedTool : null;
+function performAction(index, selectedAction = selectedTool) {
+  const tool = ['turnip', 'carrot', 'pumpkin'].includes(selectedAction) ? 'seed' : selectedAction;
+  const crop = tool === 'seed' ? selectedAction : null;
   const result = farm.act(index, tool, crop);
   if (result.ok) {
     if (interactAction) interactAction.reset().fadeIn(0.08).play();
@@ -386,6 +540,7 @@ function queueAction(index) {
   if (state !== 'PLAYING' || queuedIndex !== null) return;
   selectedIndex = clamp(index, 0, farm.tiles.length - 1);
   queuedIndex = selectedIndex;
+  queuedTool = selectedTool;
   updateHud();
 }
 
@@ -412,18 +567,44 @@ function startGame() {
   toast('Select a tool, then tap a field plot.');
 }
 
+const tutorialSteps = [
+  ['HOE YOUR FIRST PLOT', 'Select HOE, then tap the glowing field plot.'],
+  ['PLANT A SEED', 'Choose TURNIP and tap the freshly tilled soil.'],
+  ['WATER THE CROP', 'Choose WATER and tap the planted crop before sleeping.'],
+  ['REST FOR THE NIGHT', 'Use SLEEP / NEXT DAY to grow every watered crop.'],
+  ['HARVEST AND SELL', 'Choose HARVEST, pick the mature crop, then sell your basket.'],
+];
+let tutorialIndex = 0;
+let guideReturnState = 'MENU';
+
+function showTutorial(index = 0) {
+  tutorialIndex = clamp(index, 0, tutorialSteps.length - 1);
+  ui['tutorial-progress'].textContent = `FIRST HARVEST · ${tutorialIndex + 1}/${tutorialSteps.length}`;
+  ui['tutorial-title'].textContent = tutorialSteps[tutorialIndex][0];
+  ui['tutorial-copy'].textContent = tutorialSteps[tutorialIndex][1];
+  ui.tutorial.classList.remove('hidden');
+}
+
+function hideTutorial() {
+  ui.tutorial.classList.add('hidden');
+}
+
 function resetInteractionState() {
   queuedIndex = null;
+  queuedTool = null;
   selectedIndex = 0;
   selectedTool = 'hoe';
   farmerRoot.position.set(-1.5, 0.1, -3.8);
-  farmerRoot.rotation.set(0, 0, 0);
+  farmerRoot.rotation.set(0, Math.PI, 0);
   messageTimer = 0;
   ui.message.classList.remove('show');
   setAnimation('idle');
 }
 
 function endDay() {
+  queuedIndex = null;
+  queuedTool = null;
+  setAnimation('idle');
   const before = farm.day;
   farm.endDay();
   applyRain();
@@ -452,6 +633,22 @@ ui['new-game'].addEventListener('click', () => {
   completionShown = false;
   save();
   startGame();
+  showTutorial(0);
+});
+ui['tutorial-next'].addEventListener('click', () => {
+  if (tutorialIndex >= tutorialSteps.length - 1) hideTutorial();
+  else showTutorial(tutorialIndex + 1);
+});
+ui['tutorial-skip'].addEventListener('click', hideTutorial);
+ui['guide-open'].addEventListener('click', () => {
+  guideReturnState = state;
+  hideTutorial();
+  changeState('GUIDE');
+  ui['field-guide'].classList.remove('hidden');
+});
+ui['guide-close'].addEventListener('click', () => {
+  ui['field-guide'].classList.add('hidden');
+  changeState(guideReturnState);
 });
 ui['pause-toggle'].addEventListener('click', () => changeState('PAUSED'));
 ui.resume.addEventListener('click', () => changeState('PLAYING'));
@@ -526,9 +723,9 @@ addEventListener('keydown', event => {
 function resize() {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
-  renderer.setSize(width, height, false);
+  renderer.setSize(Math.max(1, Math.round(width * RENDER_SCALE)), Math.max(1, Math.round(height * RENDER_SCALE)), false);
   const aspect = width / Math.max(height, 1);
-  const viewHeight = width < 700 ? 20 : 17;
+  const viewHeight = width < 700 ? 22 : 20;
   camera.left = -viewHeight * aspect / 2;
   camera.right = viewHeight * aspect / 2;
   camera.top = viewHeight / 2;
@@ -545,6 +742,9 @@ function updateDebug() {
     get farm() { return farm; },
     get selectedTool() { return selectedTool; },
     assets,
+    aesthetic: VOXEL_WORLD ? 'voxel-farm' : 'default',
+    renderScale: RENDER_SCALE,
+    layout,
     renderer,
     scene,
     camera,
@@ -570,9 +770,11 @@ function frame(now) {
       if (distance < 0.18) {
         farmerRoot.position.set(destination.x, 0.1, destination.z - 0.46);
         const actionIndex = queuedIndex;
+        const actionTool = queuedTool;
         queuedIndex = null;
+        queuedTool = null;
         setAnimation('idle');
-        performAction(actionIndex);
+        performAction(actionIndex, actionTool);
       } else {
         const step = Math.min(distance, dt * 5.2);
         farmerRoot.position.x += dx / distance * step;
@@ -582,6 +784,16 @@ function frame(now) {
       }
     } else {
       setAnimation('idle');
+    }
+    if (voxelLegLeft && voxelLegRight && voxelArmLeft && voxelArmRight) {
+      const walking = queuedIndex !== null;
+      voxelWalkPhase += dt * (walking ? 11 : 2);
+      const stride = Math.sin(voxelWalkPhase) * (walking ? 0.72 : 0.035);
+      voxelLegLeft.rotation.x = stride;
+      voxelLegRight.rotation.x = -stride;
+      voxelArmLeft.rotation.x = -stride * 0.75;
+      voxelArmRight.rotation.x = stride * 0.75;
+      farmerModel.position.y = walking ? Math.abs(Math.sin(voxelWalkPhase * 2)) * 0.055 : 0;
     }
     if (hub.visible) hub.rotation.z -= dt * 0.55;
   }

@@ -132,7 +132,7 @@ export class FarmModel {
 
   static fromSnapshot(raw) {
     const farm = new FarmModel();
-    if (!raw || typeof raw !== 'object') return farm;
+    if (!raw || typeof raw !== 'object' || raw.version !== 1) return farm;
     farm.day = boundedInt(raw.day, farm.day, 1, 9999);
     farm.coins = boundedInt(raw.coins, farm.coins, 0, 999999);
     farm.energy = boundedInt(raw.energy, farm.energy, 0, 14);
@@ -153,7 +153,7 @@ export class FarmModel {
           tile.crop = crop;
           tile.growth = boundedInt(source.growth, 0, 0, CROPS[crop].growDays);
           tile.watered = source.watered === true;
-          tile.ready = source.ready === true || tile.growth >= CROPS[crop].growDays;
+          tile.ready = tile.growth >= CROPS[crop].growDays;
         }
         return tile;
       });
