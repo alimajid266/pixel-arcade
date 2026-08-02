@@ -8,7 +8,7 @@
 - **Flappy Canvas** — a reflex-based endless flying game.
 - **Zombie Defense: Last Outpost** — a 12-wave tactical tower-defense campaign.
 - **Road Hop** — a low-poly 3D traffic-crossing game with four biomes, six original cosmetic characters, Endless, and a 50-row Road Rally.
-- **Harvest Hollow** — a cozy top-down 2.5D farming simulator with crops, weather, market orders, seed unlocks, and a repeatable windmill-restoration goal.
+- **Harvest Hollow** — an endless top-down 2.5D farming simulator with crops, weather, market orders, seed unlocks, crop spoilage, and permanent energy upgrades.
 
 The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. New local changes remain unpublished until an explicitly authorized GitHub push and Vercel release.
 
@@ -83,9 +83,9 @@ It includes:
 
 ### Harvest Hollow
 
-Harvest Hollow is a compact farming simulator rendered as a bold, candy-colored voxel diorama with an orthographic Three.js camera. The player tills a 30-plot field, plants and waters crops, sleeps to advance growth, sells produce, and completes rotating market requests. Carrots unlock on day 2 and pumpkins on day 4; earning 350 coins restores the windmill, after which farming continues indefinitely.
+Harvest Hollow is a compact endless farming simulator rendered as a bold, candy-colored voxel diorama with an orthographic Three.js camera. The player tills a 30-plot field, plants and waters crops, sleeps through a short night transition, sells produce, and completes rotating market requests. Carrots unlock on day 2 and pumpkins on day 4. Maximum energy starts at 14 and can be permanently increased to 20 for 80 coins per level.
 
-It includes a blocky CC0 Kenney character with procedural limb animation, cohesive CC0 suburban scenery, checkerboard voxel terrain, first-run onboarding and a persistent Field Guide, three crops with different growth/economy profiles, deterministic rainy days, keyboard/touch plot interaction, guarded local save recovery, synthesized feedback audio, pause, and desktop/portrait-phone layouts.
+It includes a blocky CC0 Kenney character with procedural limb animation, cohesive CC0 suburban scenery, an expanded checkerboard terrain framed by a 31-tree forest, first-run onboarding and a persistent Field Guide, three crops with explicit growth and sale values, deterministic rainy days that also water newly planted seeds, a two-ready-day harvest window before rot, keyboard/touch plot interaction, guarded local save recovery, synthesized feedback audio, pause, and desktop/portrait-phone layouts. The windmill is a four-blade landmark rather than a completion gate, so orders and farming continue indefinitely.
 
 ---
 
@@ -679,7 +679,7 @@ Three.js revision `170` is vendored at `vendor/three.module.min.js` and loaded f
 
 ## Harvest Hollow specification
 
-Harvest Hollow adapts the recognizable farming-simulator loop—prepare soil, plant, water, wait, harvest, sell, and reinvest—into a five-to-ten-minute browser-friendly slice. It deliberately omits the content-heavy town, relationship, crafting, and livestock layers used by larger farming games. One visible restoration goal gives the first run direction; rotating orders and unrestricted days keep the farm repeatable afterward.
+Harvest Hollow adapts the recognizable farming-simulator loop—prepare soil, plant, water, wait, harvest, sell, and reinvest—into a five-to-ten-minute browser-friendly slice. It deliberately omits the content-heavy town, relationship, crafting, and livestock layers used by larger farming games. Rotating orders, permanent energy upgrades, and unrestricted days keep the farm repeatable without an ending.
 
 ### Crop economy
 
@@ -689,15 +689,15 @@ Harvest Hollow adapts the recognizable farming-simulator loop—prepare soil, pl
 | Carrot | Day 2 | 14 | 2 | 36 | 22 | 11.0 |
 | Pumpkin | Day 4 | 24 | 3 | 70 | 46 | 15.33 |
 
-A fresh farm starts with 60 coins, six turnip seeds, and 14 energy. Hoeing, planting, watering, and harvesting each consume one energy only when the action succeeds. Invalid actions do not spend energy or inventory. Sleeping advances only crops that were watered; every third day is rainy and automatically waters all planted plots. Crops do not wither, so the compact game remains forgiving.
+A fresh farm starts with 60 coins, six turnip seeds, and 14 energy. Hoeing, planting, watering, and harvesting each consume one energy only when the action succeeds. Invalid actions do not spend energy or inventory. Sleeping advances only crops that were watered; every third day is rainy and automatically waters existing crops plus seeds planted during that rainy day. Mature crops remain harvestable for two ready days, then rot to tilled soil when the third ready day would begin.
 
-The request board cycles through three deliveries: three turnips for 35 coins, two carrots for 80, and two pumpkins for 150. Normal basket sales and request rewards both advance the 350-coin windmill fund. Crossing that threshold restores the complete windmill and opens a completion panel exactly once in that run; continuing preserves the same farm and order loop.
+The request board cycles indefinitely through three deliveries: three turnips for 35 coins, two carrots for 80, and two pumpkins for 150. Normal basket sales and request rewards fund more seeds and permanent maximum-energy upgrades. Each energy upgrade costs 80 coins, adds one current and maximum energy, persists in the local save, and caps at 20.
 
 ### Rendering, assets, and persistence
 
-The orthographic camera keeps all 30 plots readable while retaining real 3D depth. The blocky farmer comes from Kenney's CC0 Blocky Characters pack; the farmhouse, fences, trees, stepping stones, and planters come from Kenney's CC0 City Kit (Suburban). The farmhouse uses a documented local coral-roof texture derivative. Lilita One is vendored under the SIL Open Font License 1.1 for the game-style HUD, menus, tutorial, and Field Guide. Exact source links, local filenames, licenses, transformations, and SHA-256 hashes are recorded in `farmstead/ASSET-LICENSES.md`. Checkerboard terrain, voxel crops, path and pond blocks, the market stall, farmer accessories, and the restoration windmill are original game geometry. Rendering disables multisample antialiasing, draws at full CSS viewport dimensions with a `1×` pixel-ratio cap, uses instancing and merged repeated scenery, and remains under the representative 80-draw-call browser budget.
+The orthographic camera keeps all 30 plots readable while retaining real 3D depth. The blocky farmer comes from Kenney's CC0 Blocky Characters pack; the farmhouse, fences, trees, stepping stones, and planters come from Kenney's CC0 City Kit (Suburban). The farmhouse uses a documented local coral-roof texture derivative. Lilita One is vendored under the SIL Open Font License 1.1 for the game-style HUD, menus, tutorial, and Field Guide. Exact source links, local filenames, licenses, transformations, and SHA-256 hashes are recorded in `farmstead/ASSET-LICENSES.md`. Expanded checkerboard terrain, voxel crops, path and pond blocks, the market stall, farmer accessories, and the four-blade windmill landmark are original game geometry; 31 authored tree placements frame the horizon. Rendering enables multisample antialiasing and filtered textures, draws at full CSS viewport dimensions with a `1×` pixel-ratio cap, uses instancing and merged repeated scenery, and remains under the representative 80-draw-call browser budget.
 
-`pixelArcade.harvestHollow.v1` stores day, currency, energy, seed/produce inventories, earnings, request index, and all 30 plot states. Loading requires save schema version 1, clamps numeric ranges, derives harvest readiness from validated growth, validates crop/state identifiers, requires the exact tile count, and falls back to a new farm when storage or JSON parsing fails. The debug handle exposes state for local tests but does not make local state authoritative or secure.
+`pixelArcade.harvestHollow.v1` stores day, currency, current/maximum energy, seed/produce inventories, earnings, request index, and all 30 plot states including ready-day age. Loading requires save schema version 1, clamps numeric ranges, derives harvest readiness from validated growth, validates crop/state identifiers, requires the exact tile count, and falls back to a new farm when storage or JSON parsing fails. Older version-1 saves without the new fields safely receive the original 14-energy maximum and a fresh harvest window. The debug handle exposes state for local tests but does not make local state authoritative or secure.
 
 ---
 
@@ -725,7 +725,7 @@ The orthographic camera keeps all 30 plots readable while retaining real 3D dept
 | Locally vendored Three.js revision 170 | Avoids runtime CDN calls and keeps static deployment deterministic. The repository must deliberately update and re-test the pinned dependency. |
 | Six original Road Hop characters | Adds a local cosmetic progression loop without copyrighted assets or gameplay advantages. Prices are fixed and there are no abilities or inventory. |
 | Orthographic 2.5D Harvest Hollow | Makes plots readable on desktop and portrait phones while preserving animated 3D characters and environment depth. It limits camera exploration. |
-| One crop loop plus orders/restoration | Reproduces the expected farming rhythm without the content cost of NPC relationships, crafting, livestock, or a town. |
+| One crop loop plus endless orders/upgrades | Reproduces the expected farming rhythm without the content cost of NPC relationships, crafting, livestock, a town, or a forced ending. |
 | Licensed authored farm assets | Gives the farm a coherent recognizable barn and animated farmer. Attribution, hashes, local files, and loader code increase repository size. |
 
 ---
@@ -773,7 +773,7 @@ pixel-arcade/
 │   ├── verify_road_hop_playtest_corrections.py # Performance, Haunted, framing, and PIP contracts
 │   ├── verify_road_hop_expansion_mobile.py # Phone controls, panels, and Rally swipe
 │   ├── farmstead_core.mjs             # Focused crop, economy, request, and save assertions
-│   ├── farmstead_core_thorough.mjs    # 15-scenario state-machine and economy regression suite
+│   ├── farmstead_core_thorough.mjs    # 19-scenario state-machine and economy regression suite
 │   ├── verify_farmstead_source.py     # Local assets/imports/integration contract
 │   ├── verify_farmstead_browser.py    # Chromium WebGL interaction and mobile QA
 │   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks

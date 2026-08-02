@@ -37,6 +37,7 @@ for control in [
     "start", "pause-toggle", "resume", "end-day", "sell-all", "deliver-order",
     "tool-hoe", "tool-water", "tool-turnip", "tool-carrot", "tool-pumpkin", "tool-harvest",
     "guide-open", "field-guide", "tutorial", "tutorial-next",
+    "buy-energy", "night-transition",
 ]:
     assert f'id="{control}"' in html, control
 
@@ -54,6 +55,7 @@ assert "eval(" not in source and ".innerHTML" not in source
 assert "window.__game" in source
 assert "VOXEL_WORLD" in source
 assert "const RENDER_SCALE = 1;" in source
+assert "antialias: true" in source
 assert "InstancedMesh" in source
 assert "voxel('character-a')" in source
 assert "voxel('building-type-n')" in source
@@ -65,6 +67,13 @@ assert "Kenney City Kit (Suburban)" in licenses
 assert "Lilita One" in licenses
 assert "SIL Open Font License 1.1" in licenses
 assert "!farmstead/assets/voxel/Textures/*.png" in vercel_ignore
+assert 'id="complete"' not in html
+assert "RESTORE THE MILL" not in html
+assert "checkCompletion" not in source
+assert "START WITH 6 TURNIP SEEDS" in html
+assert "RAIN WATERS EVERY PLANTED CROP" in html
+assert "TURNIP · 1 DAY · SELLS 18" in html
+assert "MATURE CROPS ROT" in html
 
 expected_hashes = {
     "character-a.glb": "8ee5dae167ec589863f6bba222467eb90ace8be357a4c5abfcab289290181616",

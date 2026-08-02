@@ -34,7 +34,8 @@ with sync_playwright() as p:
     ]
     page.wait_for_function("document.fonts.check('16px \\\"Lilita One\\\"')")
     assert "Lilita One" in page.evaluate("getComputedStyle(document.body).fontFamily")
-    assert page.evaluate("__game.assets.treeCount") >= 15
+    assert page.evaluate("__game.assets.treeCount") >= 30
+    assert page.evaluate("[__game.windmillBlades,__game.renderer.getContext().getContextAttributes().antialias]") == [4, True]
     voxel_contract = page.evaluate("""() => {
       const grass=__game.scene.getObjectByName('voxel-grass-grid');
       const path=__game.scene.getObjectByName('voxel-path-blocks');
@@ -44,7 +45,7 @@ with sync_playwright() as p:
         grassInstanced:grass?.children.every(m=>m.isInstancedMesh),pathInstanced:path?.isInstancedMesh,pondInstanced:pond?.isInstancedMesh};
     }""")
     assert voxel_contract == {
-        "grass": 952, "grassLayers": 4, "path": 18, "pond": 16,
+        "grass": 1760, "grassLayers": 4, "path": 21, "pond": 16,
         "grassInstanced": True, "pathInstanced": True, "pondInstanced": True,
     }, voxel_contract
     rendering = page.evaluate("""() => ({
@@ -55,13 +56,19 @@ with sync_playwright() as p:
     assert rendering["bufferWidth"] == rendering["cssWidth"], rendering
     overlap = page.evaluate("""() => {
       const hit=(a,b)=>a.minX<b.maxX&&a.maxX>b.minX&&a.minZ<b.maxZ&&a.maxZ>b.minZ;
-      return Object.values(__game.layout.buildings).some(b=>__game.layout.paths.some(p=>hit(b,p)));
+      return {
+        buildingPath:Object.values(__game.layout.buildings).some(b=>__game.layout.paths.some(p=>hit(b,p))),
+        fieldPath:__game.layout.paths.some(p=>hit(__game.layout.field,p)),
+        houseField:hit(__game.layout.buildings.farmhouse,__game.layout.field)
+      };
     }""")
-    assert overlap is False, rendering
+    assert overlap == {"buildingPath": False, "fieldPath": False, "houseField": False}, (overlap, rendering)
 
     page.locator("#guide-open").click()
     assert page.locator("#field-guide").is_visible()
-    assert "HOE" in page.locator("#field-guide").inner_text()
+    guide_text = page.locator("#field-guide").inner_text()
+    for explanation in ["START WITH 6 TURNIP SEEDS", "TURNIP · 1 DAY · SELLS 18", "RAIN WATERS", "MATURE CROPS ROT", "80 coins"]:
+        assert explanation in guide_text, guide_text
     page.locator("#guide-close").click()
 
     page.locator("#new-game").click()
@@ -74,6 +81,9 @@ with sync_playwright() as p:
     page.evaluate("__game.farm.produce.turnip=3; __game.refresh()")
     page.locator("#deliver-order").click(timeout=2000)
     assert page.evaluate("[__game.farm.orderIndex,__game.farm.earnings,__game.farm.produce.turnip]") == [1, 35, 0]
+    page.evaluate("__game.farm.coins=80; __game.refresh()")
+    page.locator("#buy-energy").click()
+    assert page.evaluate("[__game.farm.coins,__game.farm.energy,__game.farm.maxEnergy]") == [0, 15, 15]
 
     # A queued action from an abandoned run must never mutate a newly reset farm.
     page.evaluate("__game.actTile(29)")
@@ -84,8 +94,18 @@ with sync_playwright() as p:
     assert page.evaluate("[__game.farm.energy,__game.farm.tiles[29].state,__game.selectedTool]") == [14, "grass", "hoe"]
 
     # Sleeping must cancel movement queued on the previous day.
-    page.evaluate("__game.actTile(28); __game.endDay()")
+    page.evaluate("__game.farm.coins=500; __game.farm.produce.turnip=3; __game.refresh(); __game.actTile(28); __game.endDay()")
+    assert page.evaluate("[__game.transitioning,document.getElementById('night-transition').classList.contains('show')]") == [True, True]
+    blocked_before = page.evaluate("[JSON.stringify(__game.farm.snapshot()),__game.selectedTool]")
+    page.evaluate("""() => {
+      for (const id of ['buy-turnip','buy-carrot','buy-pumpkin','buy-energy','sell-all','deliver-order','tool-water']) document.getElementById(id).click();
+      dispatchEvent(new KeyboardEvent('keydown',{key:'2'}));
+      __game.actTile(0);
+    }""")
+    blocked_after = page.evaluate("[JSON.stringify(__game.farm.snapshot()),__game.selectedTool]")
+    assert blocked_after == blocked_before, (blocked_before, blocked_after)
     page.wait_for_timeout(3000)
+    assert page.evaluate("[__game.transitioning,document.getElementById('night-transition').classList.contains('show')]") == [False, False]
     assert page.evaluate("[__game.farm.day,__game.farm.energy,__game.farm.tiles[28].state]") == [2, 14, "grass"]
     page.locator("#pause-toggle").click()
     page.locator("#pause .menu-return").click()
@@ -94,8 +114,22 @@ with sync_playwright() as p:
 
     # A queued action keeps the tool selected when the plot was clicked.
     page.evaluate("__game.selectTool('hoe'); __game.actTile(27); __game.selectTool('water')")
-    page.wait_for_timeout(3000)
-    assert page.evaluate("[__game.farm.tiles[27].state,__game.farm.energy]") == ["tilled", 13]
+    page.wait_for_function("__game.farm.tiles[27].state === 'tilled'", timeout=5000)
+    queued_result = page.evaluate("[__game.farm.tiles[27].state,__game.farm.energy]")
+    assert queued_result == ["tilled", 13], queued_result
+    page.locator("#pause-toggle").click()
+    page.locator("#pause .menu-return").click()
+    page.locator("#new-game").click()
+    page.locator("#tutorial-skip").click()
+
+    # Planting through ordinary controls on a rainy day must auto-water the seed.
+    page.evaluate("__game.farm.day=3; __game.refresh()")
+    click_tile(page, 26)
+    page.wait_for_function("__game.farm.tiles[26].state === 'tilled'")
+    page.locator("#tool-turnip").click()
+    click_tile(page, 26)
+    page.wait_for_function("__game.farm.tiles[26].crop === 'turnip'")
+    assert page.evaluate("__game.farm.tiles[26].watered") is True
     page.locator("#pause-toggle").click()
     page.locator("#pause .menu-return").click()
     page.locator("#new-game").click()
@@ -128,6 +162,7 @@ with sync_playwright() as p:
     page.wait_for_function("__game.farm.tiles[0].watered === true")
     page.locator("#end-day").click()
     assert page.evaluate("[__game.farm.day,__game.farm.tiles[0].ready]") == [2, True]
+    page.wait_for_function("!__game.transitioning")
 
     page.locator("#tool-harvest").click()
     click_tile(page, 0)
@@ -161,8 +196,14 @@ with sync_playwright() as p:
     page.wait_for_function("__game.ready && __game.assets.farmer && __game.assets.farmhouse && __game.assets.scenery")
     page.locator("#start").click()
     assert page.evaluate("__game.state") == "PLAYING"
+    click_tile(page, 14)
+    page.wait_for_function("__game.farm.tiles[14].state === 'tilled'", timeout=5000)
+    page.locator("#guide-open").click()
+    assert page.locator("#field-guide").is_visible()
+    page.locator("#guide-close").click()
+    assert page.evaluate("__game.state") == "PLAYING"
     mobile = page.evaluate("""() => {
-      const ids=['tool-hoe','tool-water','tool-turnip','tool-carrot','tool-pumpkin','tool-harvest'];
+      const ids=['tool-hoe','tool-water','tool-turnip','tool-carrot','tool-pumpkin','tool-harvest','buy-turnip','buy-carrot','buy-pumpkin','buy-energy','sell-all','end-day'];
       const boxes=ids.map(id => {const b=document.getElementById(id).getBoundingClientRect();return [id,b.left,b.right,b.width,b.height];});
       return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,boxes,errors:__errors.slice()};
     }""")
