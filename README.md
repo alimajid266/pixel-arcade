@@ -1,13 +1,14 @@
 # Pixel Arcade
 
 [![Production](https://img.shields.io/badge/production-live-8bc34a)](https://pixel-arcade-pied.vercel.app)
-[![Architecture](https://img.shields.io/badge/architecture-static%20HTML5%20Canvas-6c3fc5)](#technical-architecture)
+[![Architecture](https://img.shields.io/badge/architecture-static%20Canvas%20%2B%20WebGL-6c3fc5)](#technical-architecture)
 
-**Pixel Arcade** is a small browser arcade whose current working tree contains three complete games behind one launcher:
+**Pixel Arcade** is a small browser arcade whose current working tree contains four complete games behind one launcher:
 
 - **Flappy Canvas** — a reflex-based endless flying game.
 - **Zombie Defense: Last Outpost** — a 12-wave tactical tower-defense campaign.
 - **Road Hop** — a low-poly 3D traffic-crossing game with four biomes, six original cosmetic characters, Endless, and a 50-row Road Rally.
+- **Harvest Hollow** — a cozy top-down 2.5D farming simulator with crops, weather, market orders, seed unlocks, and a repeatable windmill-restoration goal.
 
 The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. New local changes remain unpublished until an explicitly authorized GitHub push and Vercel release.
 
@@ -21,6 +22,7 @@ The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. N
 - [Zombie Defense specification](#zombie-defense-specification)
 - [Zombie Defense difficulty model](#zombie-defense-difficulty-model)
 - [Road Hop specification](#road-hop-specification)
+- [Harvest Hollow specification](#harvest-hollow-specification)
 - [Design decisions](#design-decisions)
 - [Repository structure](#repository-structure)
 - [Local development](#local-development)
@@ -79,6 +81,12 @@ It includes:
 - pause, game-over, instant retry, synthesized hop/crash effects, and a local best score;
 - bounded lane cleanup so endless play does not retain the entire traversed world.
 
+### Harvest Hollow
+
+Harvest Hollow is a compact farming simulator rendered with an orthographic Three.js camera. The player tills a 30-plot field, plants and waters crops, sleeps to advance growth, sells produce, and completes rotating market requests. Carrots unlock on day 2 and pumpkins on day 4; earning 350 coins restores the windmill, after which farming continues indefinitely.
+
+It includes an animated licensed farmer, a licensed low-poly farm environment, three crops with different growth/economy profiles, deterministic rainy days, keyboard/touch plot interaction, guarded local save recovery, synthesized feedback audio, pause, and desktop/portrait-phone layouts.
+
 ---
 
 ## Project and game scope
@@ -88,9 +96,9 @@ It includes:
 **In scope**
 
 - One static launcher at `/`.
-- Three playable games at `/flappy/`, `/zombie-defense/`, and `/road-hop/`.
+- Four playable games at `/flappy/`, `/zombie-defense/`, `/road-hop/`, and `/farmstead/`.
 - Same-origin navigation from the launcher and in-game return/navigation controls.
-- Responsive desktop and mobile presentation, including portrait play for Flappy Canvas and Road Hop.
+- Responsive desktop and mobile presentation, including portrait play for Flappy Canvas, Road Hop, and Harvest Hollow.
 - A Zombie Defense portrait orientation gate at widths up to 736 px where its wider tactical UI would be too small to use safely.
 - Local browser persistence for preferences and records.
 - Static deployment through one GitHub repository and one Vercel project.
@@ -161,6 +169,23 @@ It includes:
 - Imported models, textures, copyrighted character designs, or Crossy Road assets.
 - Server-authoritative simulation or anti-cheat.
 
+### Harvest Hollow scope
+
+**In scope**
+
+- One fixed orthographic farm with 30 tappable plots.
+- Hoe, water, three seed tools, and harvest actions with a 14-action daily energy budget.
+- Turnips (`1` watered day), carrots (`2`), and pumpkins (`3`) with distinct seed and sale prices.
+- Day progression, deterministic rain every third day, seed unlocks, produce sales, rotating market requests, and a 350-coin restoration goal followed by endless play.
+- Browser-local save persistence with bounded normalization of malformed values.
+- Licensed animated farmer and farm models, locally vendored with attribution and hashes.
+
+**Out of scope**
+
+- Livestock, relationships, dialogue trees, crafting, combat, seasons, multiplayer, and a large explorable town.
+- Real-time calendars or offline crop growth.
+- Cloud saves, paid currency, analytics, or server-authoritative economy.
+
 ---
 
 ## How to play
@@ -214,6 +239,17 @@ Zombie Defense uses a `1.5s` resume countdown. Flappy Canvas uses a three-second
 
 PIP cannot hop outside the seven-cell lateral boundary, below the starting row, or into a tree. A hop lasts `0.16s`; collision is evaluated against traffic after landing. Score equals the farthest row reached.
 
+### Harvest Hollow controls
+
+| Action | Input |
+|---|---|
+| Select plot | Tap/click a plot, or move the highlight with Arrow keys/WASD |
+| Use selected tool | Tap/click the plot, or press Space/Enter |
+| Select tool | Toolbelt button or number keys `1`–`6` |
+| Buy seed / sell basket / deliver request | Corresponding DOM button |
+| Advance crop growth | `Sleep / Next Day` after watering |
+| Pause / resume | `P`, `Escape`, the `Ⅱ` control, or Resume |
+
 ---
 
 ## Technical architecture
@@ -227,7 +263,8 @@ Browser
 ├── /                       → index.html
 ├── /flappy/                → flappy/index.html
 ├── /zombie-defense/        → zombie-defense/index.html
-└── /road-hop/              → road-hop/index.html + local Three.js module
+├── /road-hop/              → road-hop/index.html + local Three.js module
+└── /farmstead/             → Harvest Hollow shell, model, and Three.js scene
 ```
 
 After the static files are delivered, gameplay runs entirely in the browser:
@@ -238,7 +275,7 @@ After the static files are delivered, gameplay runs entirely in the browser:
 - no externally hosted game assets or runtime CDN dependency;
 - no server-side game state.
 
-Flappy Canvas and Zombie Defense remain self-contained Canvas HTML files. Road Hop separates its game module from its HTML shell and vendors a pinned Three.js module locally so its WebGL renderer has no production network dependency.
+Flappy Canvas and Zombie Defense remain self-contained Canvas HTML files. Road Hop and Harvest Hollow separate their game modules from their HTML shells and share a pinned local Three.js module. Harvest Hollow also vendors the matching GLTF loader/utilities and its licensed GLB models, so gameplay makes no production network request.
 
 ### Main implementation patterns
 
@@ -260,6 +297,7 @@ The games preserve fixed logical worlds while scaling their displayed Canvas:
 | Flappy Canvas | `400 × 600` |
 | Zombie Defense | `800 × 650` |
 | Road Hop | viewport-sized WebGL buffer, capped at `1×` device pixel ratio |
+| Harvest Hollow | viewport-sized orthographic WebGL buffer, capped at `1×` device pixel ratio |
 
 Zombie Defense uses a `20 × 12` battlefield grid with `40px` logical cells. Its top `480px` is the build grid, `500px` is the playable world area, and the remaining space is the HUD.
 
@@ -638,6 +676,30 @@ Three.js revision `170` is vendored at `vendor/three.module.min.js` and loaded f
 
 ---
 
+## Harvest Hollow specification
+
+Harvest Hollow adapts the recognizable farming-simulator loop—prepare soil, plant, water, wait, harvest, sell, and reinvest—into a five-to-ten-minute browser-friendly slice. It deliberately omits the content-heavy town, relationship, crafting, and livestock layers used by larger farming games. One visible restoration goal gives the first run direction; rotating orders and unrestricted days keep the farm repeatable afterward.
+
+### Crop economy
+
+| Crop | Unlock | Seed | Watered days | Sale | Profit after seed | Profit per growth day |
+|---|---:|---:|---:|---:|---:|---:|
+| Turnip | Day 1 | 8 | 1 | 18 | 10 | 10.0 |
+| Carrot | Day 2 | 14 | 2 | 36 | 22 | 11.0 |
+| Pumpkin | Day 4 | 24 | 3 | 70 | 46 | 15.33 |
+
+A fresh farm starts with 60 coins, six turnip seeds, and 14 energy. Hoeing, planting, watering, and harvesting each consume one energy only when the action succeeds. Invalid actions do not spend energy or inventory. Sleeping advances only crops that were watered; every third day is rainy and automatically waters all planted plots. Crops do not wither, so the compact game remains forgiving.
+
+The request board cycles through three deliveries: three turnips for 35 coins, two carrots for 80, and two pumpkins for 150. Normal basket sales and request rewards both advance the 350-coin windmill fund. Crossing that threshold restores the complete windmill and opens a completion panel exactly once in that run; continuing preserves the same farm and order loop.
+
+### Rendering, assets, and persistence
+
+The orthographic camera keeps all 30 plots readable while retaining real 3D depth. The animated farmer is “Farmer” by Quaternius (CC0), and the barn/fence environment is “Farm” by Poly by Google (CC BY 3.0). Exact source links, attribution, local filenames, and SHA-256 hashes are recorded in `farmstead/ASSET-LICENSES.md`. Crop models, paths, pond border, plots, and the restoration windmill are original game geometry. The static farm model is merged by material after loading, reducing the representative scene to 68 draw calls, 38 retained geometries, and about 11,500 triangles. Rendering disables multisample antialiasing and caps device pixel ratio at `1×` to favor stable low-end performance.
+
+`pixelArcade.harvestHollow.v1` stores day, currency, energy, seed/produce inventories, earnings, request index, and all 30 plot states. Loading clamps numeric ranges, validates crop/state identifiers, requires the exact tile count, and falls back to a new farm when storage or JSON parsing fails. The debug handle exposes state for local tests but does not make local state authoritative or secure.
+
+---
+
 ## Design decisions
 
 | Decision | Reason and tradeoff |
@@ -661,6 +723,9 @@ Three.js revision `170` is vendored at `vendor/three.module.min.js` and loaded f
 | Orthographic WebGL for Road Hop | Produces a convincing low-poly 3D world while keeping grid hops readable. It costs more GPU and dependency weight than a faux-3D Canvas renderer. |
 | Locally vendored Three.js revision 170 | Avoids runtime CDN calls and keeps static deployment deterministic. The repository must deliberately update and re-test the pinned dependency. |
 | Six original Road Hop characters | Adds a local cosmetic progression loop without copyrighted assets or gameplay advantages. Prices are fixed and there are no abilities or inventory. |
+| Orthographic 2.5D Harvest Hollow | Makes plots readable on desktop and portrait phones while preserving animated 3D characters and environment depth. It limits camera exploration. |
+| One crop loop plus orders/restoration | Reproduces the expected farming rhythm without the content cost of NPC relationships, crafting, livestock, or a town. |
+| Licensed authored farm assets | Gives the farm a coherent recognizable barn and animated farmer. Attribution, hashes, local files, and loader code increase repository size. |
 
 ---
 
@@ -676,8 +741,16 @@ pixel-arcade/
 ├── road-hop/
 │   ├── index.html                     # Road Hop shell and HUD
 │   └── game.js                        # Three.js scene, simulation, and input
+├── farmstead/
+│   ├── index.html                     # Harvest Hollow shell and responsive HUD
+│   ├── game.js                        # Orthographic scene, assets, input, audio
+│   ├── farm-core.mjs                  # Pure crop/economy/save model
+│   ├── ASSET-LICENSES.md              # Model sources, licenses, and hashes
+│   └── assets/                        # Licensed farmer and farm GLB files
 ├── vendor/
-│   └── three.module.min.js            # Pinned Three.js r170 module
+│   ├── three.module.min.js            # Pinned Three.js r170 module
+│   ├── GLTFLoader.js                  # Matching locally patched GLB loader
+│   └── BufferGeometryUtils.js         # GLTFLoader utility dependency
 ├── tests/
 │   ├── verify_source_contract.py      # Same-origin/source invariants
 │   ├── verify_flappy_feedback.py      # Flappy behavior and rendering checks
@@ -698,6 +771,9 @@ pixel-arcade/
 │   ├── verify_road_hop_review_regressions.py # Save, daily, reward, and deterministic regressions
 │   ├── verify_road_hop_playtest_corrections.py # Performance, Haunted, framing, and PIP contracts
 │   ├── verify_road_hop_expansion_mobile.py # Phone controls, panels, and Rally swipe
+│   ├── farmstead_core.mjs             # Crop, economy, request, and save assertions
+│   ├── verify_farmstead_source.py     # Local assets/imports/integration contract
+│   ├── verify_farmstead_browser.py    # Chromium WebGL interaction and mobile QA
 │   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks
 │   └── verify_production.py           # Production browser smoke test
 └── README.md
@@ -721,6 +797,7 @@ Open:
 - Flappy Canvas: http://127.0.0.1:8770/flappy/
 - Zombie Defense: http://127.0.0.1:8770/zombie-defense/
 - Road Hop: http://127.0.0.1:8770/road-hop/
+- Harvest Hollow: http://127.0.0.1:8770/farmstead/
 
 Do not use the development server as a public production server.
 
@@ -728,7 +805,7 @@ Do not use the development server as a public production server.
 
 ## Testing
 
-Browser regressions use Python, Selenium, Firefox, and geckodriver. The committed browser tests currently point to the verified Linux Snap paths:
+Canvas regressions use Python, Selenium, Firefox, and geckodriver. Harvest Hollow's WebGL regression uses Playwright Chromium with SwiftShader because headless Firefox on the verified machine cannot create a WebGL context. The committed Selenium tests currently point to the verified Linux Snap paths:
 
 - Firefox: `/snap/firefox/current/usr/lib/firefox/firefox`
 - geckodriver: `/snap/bin/firefox.geckodriver`
@@ -737,7 +814,8 @@ Installing Selenium alone is insufficient if those browser/driver paths do not e
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install selenium
+.venv/bin/pip install selenium playwright
+.venv/bin/playwright install chromium
 python3 -m http.server 8770 --bind 127.0.0.1
 ```
 
@@ -757,6 +835,9 @@ In another terminal:
 .venv/bin/python tests/verify_road_hop_shell.py
 .venv/bin/python tests/verify_road_hop_gameplay.py
 .venv/bin/python tests/verify_road_hop_mobile.py
+.venv/bin/python tests/verify_farmstead_source.py
+.venv/bin/python tests/verify_farmstead_browser.py
+node tests/farmstead_core.mjs
 .venv/bin/python tests/verify_latest_feedback.py
 ```
 
@@ -768,7 +849,7 @@ Production smoke test:
 
 The regression suite covers, among other behavior:
 
-- launcher and same-origin navigation across all three games;
+- launcher and same-origin navigation across all four games;
 - Canvas/WebGL runtime errors and initial states;
 - Road Hop's real Three.js renderer, orthographic camera, generated lane bounds, renderer-memory stability across retries, UI-button start/retry/resume/touch-pause paths, one-cell movement, score monotonicity, tree blocking, pause/resume, vehicle collision, local best-score reload, exact `390×844` swipe/cancel mapping, and responsive backing buffer;
 - Flappy scoring, pacing, ghost orientation/visibility, pause, and menu geometry;
@@ -781,12 +862,13 @@ The regression suite covers, among other behavior:
 - bounty/fine ordering, lethal escapes, final-wave boss flow, and terminal cleanup;
 - map preview and utility-control geometry;
 - sidebar/toolbar separation, Canvas aspect ratio, scaled input, Flappy portrait play, and the Zombie portrait gate.
+- Harvest Hollow's complete hoe/plant/water/day/harvest/sell loop, pause/resume, persistence reload, licensed-model loading, empty runtime-error capture, and exact `390×844` six-tool geometry.
 
 ---
 
 ## Deployment
 
-Production is deployed as one static Vercel project connected to the repository's `main` branch. The Road Hop changes documented here are locally verified but are **not yet present in production**; publishing them requires explicit release approval.
+Production is deployed as one static Vercel project connected to the repository's `main` branch. The Harvest Hollow changes documented here are locally verified but are **not yet present in production**; publishing them requires explicit release approval.
 
 - Repository: https://github.com/alimajid266/pixel-arcade
 - Production: https://pixel-arcade-pied.vercel.app

@@ -97,6 +97,7 @@
   }
   .game-tile.active { color: #2F185C; background: #FF7A59; border-color: #FFF7D6; }
   .game-tile.available { color: #142414; background: #8BC34A; border-color: #FFF7D6; box-shadow: inset 0 -5px 0 #4F7D2C; }
+  .game-tile.farm { color: #173c2f; background: #ffd166; box-shadow: inset 0 -5px 0 #c39438; }
   .game-tile.available:hover, .game-tile.available:focus-visible { background: #A5D85F; transform: translate(-1px, -1px); }
   .game-tile.future { opacity: .62; background: #3B2871; }
   .game-tile small { display: block; margin-top: 5px; font-size: 8px; }
@@ -156,6 +157,10 @@
     <a id="road-hop-game-link" class="game-tile available hop" href="/road-hop/">ROAD HOP<small>PLAY GAME</small></a>
     <a id="road-hop-new-tab" class="open-tab" href="/road-hop/" target="_blank" rel="noopener" aria-label="Open Road Hop in a new tab" title="Open in new tab">↗</a>
   </div>
+  <div class="game-entry">
+    <a id="farmstead-game-link" class="game-tile available farm" href="/farmstead/">HARVEST HOLLOW<small>PLAY GAME</small></a>
+    <a id="farmstead-new-tab" class="open-tab" href="/farmstead/" target="_blank" rel="noopener" aria-label="Open Harvest Hollow in a new tab" title="Open in new tab">↗</a>
+  </div>
   <div class="rail-audio" aria-label="Audio settings">
     <button id="music-toggle" class="audio-toggle" type="button" data-state="on" aria-pressed="false">♫ MUSIC<small>ON</small></button>
     <button id="sfx-toggle" class="audio-toggle" type="button" data-state="on" aria-pressed="false">⚡ SFX<small>ON</small></button>
@@ -169,12 +174,15 @@
 const flappyUrl = '/flappy/';
 const zombieUrl = '/zombie-defense/';
 const roadHopUrl = '/road-hop/';
+const farmsteadUrl = '/farmstead/';
 document.getElementById('flappy-game-link').href = flappyUrl;
 document.getElementById('flappy-new-tab').href = flappyUrl;
 document.getElementById('zombie-game-link').href = zombieUrl;
 document.getElementById('zombie-new-tab').href = zombieUrl;
 document.getElementById('road-hop-game-link').href = roadHopUrl;
 document.getElementById('road-hop-new-tab').href = roadHopUrl;
+document.getElementById('farmstead-game-link').href = farmsteadUrl;
+document.getElementById('farmstead-new-tab').href = farmsteadUrl;
 
 window.__errors = [];
 window.addEventListener('error', function (event) {
