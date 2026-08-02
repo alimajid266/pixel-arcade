@@ -31,6 +31,7 @@ html = (GAME / "index.html").read_text()
 source = (GAME / "game.js").read_text()
 home = (ROOT / "index.html").read_text()
 licenses = (GAME / "ASSET-LICENSES.md").read_text()
+vercel_ignore = (ROOT / ".vercelignore").read_text()
 
 for control in [
     "start", "pause-toggle", "resume", "end-day", "sell-all", "deliver-order",
@@ -63,6 +64,7 @@ assert "Kenney Blocky Characters" in licenses
 assert "Kenney City Kit (Suburban)" in licenses
 assert "Lilita One" in licenses
 assert "SIL Open Font License 1.1" in licenses
+assert "!farmstead/assets/voxel/Textures/*.png" in vercel_ignore
 
 expected_hashes = {
     "character-a.glb": "8ee5dae167ec589863f6bba222467eb90ace8be357a4c5abfcab289290181616",
