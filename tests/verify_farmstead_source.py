@@ -38,7 +38,7 @@ for control in [
     "start", "pause-toggle", "resume", "end-day", "sell-all", "deliver-order",
     "tool-hoe", "tool-water", "tool-turnip", "tool-carrot", "tool-pumpkin", "tool-harvest",
     "guide-open", "field-guide", "tutorial", "tutorial-next",
-    "buy-energy", "night-transition", "night-transition-copy", "ready-count",
+    "buy-energy", "buy-plot", "night-transition", "night-transition-copy", "ready-count",
 ]:
     assert f'id="{control}"' in html, control
 
@@ -76,6 +76,10 @@ assert "RAIN WATERS EVERY PLANTED CROP" in html
 assert "UNWATERED CROPS DO NOT GROW" in html
 assert "TURNIP · 1 DAY · SELLS 18" in html
 assert "MATURE CROPS ROT" in html
+assert "PLOW" in html and ">HOE<" not in html
+assert "START WITH 20 PLOTS" in html
+assert "BUY ANOTHER PLOT FOR 60 COINS" in html
+assert "up to 25" in html
 for marker in ["rain-visuals", "straw-hat", "dryDays", "ready-count", "night-transition-copy"]:
     assert marker in source or marker in core or marker in html, marker
 

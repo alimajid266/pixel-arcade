@@ -10,6 +10,15 @@ export const ORDERS = Object.freeze([
   Object.freeze({ crop: 'pumpkin', count: 2, reward: 150 })
 ]);
 
+export const STARTING_PLOTS = 20;
+export const MAX_PLOTS = 30;
+export const PLOT_PRICE = 60;
+export const MAX_ENERGY = 25;
+export const PLOT_UNLOCK_ORDER = Object.freeze([
+  1, 2, 3, 4, 7, 8, 9, 10, 13, 14, 15, 16, 19, 20, 21, 22, 25, 26, 27, 28,
+  0, 5, 6, 11, 12, 17, 18, 23, 24, 29
+]);
+
 const freshTile = () => ({ state: 'grass', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
 const boundedInt = (value, fallback, min, max) => Number.isFinite(value)
   ? Math.max(min, Math.min(max, Math.floor(value)))
@@ -25,12 +34,14 @@ export class FarmModel {
     this.produce = { turnip: 0, carrot: 0, pumpkin: 0 };
     this.earnings = 0;
     this.orderIndex = 0;
+    this.unlockedPlots = STARTING_PLOTS;
     this.tiles = Array.from({ length: 30 }, freshTile);
   }
 
   act(index, tool, crop = null, context = {}) {
     const tile = this.tiles[index];
     if (!tile) return { ok: false, reason: 'Outside the field' };
+    if (!this.isPlotUnlocked(index)) return { ok: false, reason: 'Buy this plot first' };
     if (this.energy <= 0) return { ok: false, reason: 'Too tired' };
 
     if (tool === 'hoe') {
@@ -38,7 +49,7 @@ export class FarmModel {
       tile.state = 'tilled';
     } else if (tool === 'seed') {
       if (tile.state === 'planted') return { ok: false, reason: 'Plot is occupied' };
-      if (tile.state !== 'tilled') return { ok: false, reason: 'Till the soil first' };
+      if (tile.state !== 'tilled') return { ok: false, reason: 'Plow the soil first' };
       if (!CROPS[crop]) return { ok: false, reason: 'Choose a seed' };
       if ((this.seeds[crop] || 0) <= 0) return { ok: false, reason: 'No seeds left' };
       tile.state = 'planted';
@@ -110,12 +121,26 @@ export class FarmModel {
   }
 
   buyEnergyUpgrade() {
-    if (this.maxEnergy >= 20) return { ok: false, reason: 'Energy is maxed' };
+    if (this.maxEnergy >= MAX_ENERGY) return { ok: false, reason: 'Energy is maxed' };
     if (this.coins < 80) return { ok: false, reason: 'Not enough coins' };
     this.coins -= 80;
     this.maxEnergy += 1;
     this.energy = Math.min(this.maxEnergy, this.energy + 1);
     return { ok: true, spent: 80, maxEnergy: this.maxEnergy };
+  }
+
+  buyPlot() {
+    if (this.unlockedPlots >= MAX_PLOTS) return { ok: false, reason: 'All plots unlocked' };
+    if (this.coins < PLOT_PRICE) return { ok: false, reason: 'Not enough coins' };
+    const plotIndex = PLOT_UNLOCK_ORDER[this.unlockedPlots];
+    this.coins -= PLOT_PRICE;
+    this.unlockedPlots += 1;
+    return { ok: true, spent: PLOT_PRICE, unlockedPlots: this.unlockedPlots, plotIndex };
+  }
+
+  isPlotUnlocked(index) {
+    const orderIndex = PLOT_UNLOCK_ORDER.indexOf(index);
+    return orderIndex >= 0 && orderIndex < this.unlockedPlots;
   }
 
   sellAll() {
@@ -150,7 +175,7 @@ export class FarmModel {
 
   snapshot() {
     return {
-      version: 1,
+      version: 2,
       day: this.day,
       coins: this.coins,
       maxEnergy: this.maxEnergy,
@@ -159,19 +184,23 @@ export class FarmModel {
       produce: { ...this.produce },
       earnings: this.earnings,
       orderIndex: this.orderIndex,
+      unlockedPlots: this.unlockedPlots,
       tiles: this.tiles.map(tile => ({ ...tile }))
     };
   }
 
   static fromSnapshot(raw) {
     const farm = new FarmModel();
-    if (!raw || typeof raw !== 'object' || raw.version !== 1) return farm;
+    if (!raw || typeof raw !== 'object' || ![1, 2].includes(raw.version)) return farm;
     farm.day = boundedInt(raw.day, farm.day, 1, 9999);
     farm.coins = boundedInt(raw.coins, farm.coins, 0, 999999);
-    farm.maxEnergy = boundedInt(raw.maxEnergy, farm.maxEnergy, 14, 20);
+    farm.maxEnergy = boundedInt(raw.maxEnergy, farm.maxEnergy, 14, MAX_ENERGY);
     farm.energy = boundedInt(raw.energy, farm.energy, 0, farm.maxEnergy);
     farm.earnings = boundedInt(raw.earnings, farm.earnings, 0, 9999999);
     farm.orderIndex = boundedInt(raw.orderIndex, farm.orderIndex, 0, 9999);
+    farm.unlockedPlots = raw.version === 1
+      ? MAX_PLOTS
+      : boundedInt(raw.unlockedPlots, farm.unlockedPlots, STARTING_PLOTS, MAX_PLOTS);
     for (const crop of Object.keys(CROPS)) {
       farm.seeds[crop] = boundedInt(raw.seeds?.[crop], farm.seeds[crop], 0, 999);
       farm.produce[crop] = boundedInt(raw.produce?.[crop], farm.produce[crop], 0, 999);

@@ -83,7 +83,7 @@ It includes:
 
 ### Harvest Hollow
 
-Harvest Hollow is a compact endless farming simulator rendered as a bold, candy-colored voxel diorama with an orthographic Three.js camera. The player tills a 30-plot field, plants and waters crops, sleeps through a short night transition, sells produce, and completes rotating market requests. Carrots unlock on day 2 and pumpkins on day 4. Maximum energy starts at 14 and can be permanently increased to 20 for 80 coins per level.
+Harvest Hollow is a compact endless farming simulator rendered as a bold, candy-colored voxel diorama with an orthographic Three.js camera. A new farm starts with 20 usable plots in a centered field; the remaining 10 plots unlock individually for 60 coins each. The player plows soil, plants and waters crops, sleeps through a short night transition, sells produce, and completes rotating market requests. Carrots unlock on day 2 and pumpkins on day 4. Maximum energy starts at 14 and can be permanently increased to 25 for 80 coins per level.
 
 It includes a blocky CC0 Kenney character with procedural limb animation, cohesive CC0 suburban scenery, an expanded checkerboard terrain framed by a 31-tree forest, first-run onboarding and a persistent Field Guide, three crops with explicit growth and sale values, deterministic rainy days that also water newly planted seeds, a two-ready-day harvest window before rot, keyboard/touch plot interaction, guarded local save recovery, synthesized feedback audio, pause, and desktop/portrait-phone layouts. The windmill is a four-blade landmark rather than a completion gate, so orders and farming continue indefinitely.
 
@@ -173,10 +173,10 @@ It includes a blocky CC0 Kenney character with procedural limb animation, cohesi
 
 **In scope**
 
-- One fixed orthographic farm with 30 tappable plots.
-- Hoe, water, three seed tools, and harvest actions with a 14-action daily energy budget.
+- One fixed orthographic farm with 20 starter plots and 10 persistent, purchasable expansion plots.
+- Plow, water, three seed tools, and harvest actions with a 14-action starting daily energy budget and upgrades capped at 25.
 - Turnips (`1` watered day), carrots (`2`), and pumpkins (`3`) with distinct seed and sale prices.
-- Day progression, deterministic rain every third day, seed unlocks, produce sales, rotating market requests, and a 350-coin restoration goal followed by endless play.
+- Day progression, deterministic rain every third day, seed unlocks, produce sales, rotating market requests, field expansion, and endless play.
 - Browser-local save persistence with bounded normalization of malformed values.
 - Licensed animated farmer and modular farm scenery, locally vendored with attribution and hashes.
 
@@ -246,7 +246,7 @@ PIP cannot hop outside the seven-cell lateral boundary, below the starting row, 
 | Select plot | Tap/click a plot, or move the highlight with Arrow keys/WASD |
 | Use selected tool | Tap/click the plot, or press Space/Enter |
 | Select tool | Toolbelt button or number keys `1`–`6` |
-| Buy seed / sell basket / deliver request | Corresponding DOM button |
+| Buy seed / plot, sell basket, or deliver request | Corresponding DOM button |
 | Advance crop growth | `Sleep / Next Day` after watering |
 | Pause / resume | `P`, `Escape`, the `Ⅱ` control, or Resume |
 | Read instructions | `? Field Guide` at any time; a five-step guide also opens on New Farm |

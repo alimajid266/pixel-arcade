@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { mergeGeometries } from '../vendor/BufferGeometryUtils.js';
-import { FarmModel, CROPS } from './farm-core.mjs';
+import { FarmModel, CROPS, MAX_ENERGY, MAX_PLOTS, PLOT_PRICE } from './farm-core.mjs';
 
 const SAVE_KEY = 'pixelArcade.harvestHollow.v1';
 const canvas = document.getElementById('game');
@@ -20,7 +20,7 @@ function loadFarm() {
 let farm = loadFarm();
 let state = 'MENU';
 let selectedTool = 'hoe';
-let selectedIndex = 0;
+let selectedIndex = farm.isPlotUnlocked(0) ? 0 : 1;
 let queuedIndex = null;
 let queuedTool = null;
 let messageTimer = 0;
@@ -49,6 +49,8 @@ scene.add(sun);
 const mats = {
   grass: new THREE.MeshLambertMaterial({ color: 0x51d957, flatShading: true }),
   grassLight: new THREE.MeshLambertMaterial({ color: 0x72ef65, flatShading: true }),
+  lockedPlot: new THREE.MeshLambertMaterial({ color: 0x59646f, flatShading: true }),
+  plotToken: new THREE.MeshLambertMaterial({ color: 0xffd34e, flatShading: true }),
   soil: new THREE.MeshLambertMaterial({ color: 0xb95d43, flatShading: true }),
   wetSoil: new THREE.MeshLambertMaterial({ color: 0x713b41, flatShading: true }),
   path: new THREE.MeshLambertMaterial({ color: 0xffcc55, flatShading: true }),
@@ -172,6 +174,9 @@ for (let row = 0; row < FIELD_ROWS; row++) {
     tileHitMeshes.push(base);
   }
 }
+const lockedPlotMarkers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.46, 0.13, 0.46), mats.plotToken, 30);
+lockedPlotMarkers.name = 'locked-plot-markers';
+world.add(lockedPlotMarkers);
 
 const selection = new THREE.Mesh(new THREE.RingGeometry(0.68, 0.79, 4), mats.highlight);
 selection.rotation.x = -Math.PI / 2;
@@ -229,10 +234,17 @@ function refreshTiles() {
   tileGroups.forEach((group, index) => {
     const tile = farm.tiles[index];
     const base = group.children[0];
-    base.material = tile.state === 'grass' ? mats.grassLight : (tile.watered ? mats.wetSoil : mats.soil);
+    const locked = !farm.isPlotUnlocked(index);
+    group.userData.locked = locked;
+    base.material = locked ? mats.lockedPlot : (tile.state === 'grass' ? mats.grassLight : (tile.watered ? mats.wetSoil : mats.soil));
     for (let i = group.children.length - 1; i > 0; i--) group.remove(group.children[i]);
-    if (tile.state === 'planted') buildCrop(tile, group);
+    if (!locked && tile.state === 'planted') buildCrop(tile, group);
+    const scale = locked ? 1 : 0;
+    voxelMatrix.makeScale(scale, scale, scale);
+    voxelMatrix.setPosition(group.position.x, 0.23, group.position.z);
+    lockedPlotMarkers.setMatrixAt(index, voxelMatrix);
   });
+  lockedPlotMarkers.instanceMatrix.needsUpdate = true;
   const position = tileGroups[selectedIndex].position;
   selection.position.set(position.x, 0.2, position.z);
 }
@@ -484,8 +496,12 @@ function updateHud() {
   ui['buy-turnip'].textContent = 'TURNIP SEED · 8';
   ui['buy-carrot'].textContent = farm.day >= 2 ? 'BUY CARROT · 14' : 'CARROT · DAY 2';
   ui['buy-pumpkin'].textContent = farm.day >= 4 ? 'BUY PUMPKIN · 24' : 'PUMPKIN · DAY 4';
-  ui['buy-energy'].textContent = farm.maxEnergy >= 20 ? 'MAX ENERGY · 20' : '+1 MAX ENERGY · 80';
-  ui['buy-energy'].disabled = farm.maxEnergy >= 20;
+  ui['buy-energy'].textContent = farm.maxEnergy >= MAX_ENERGY ? `MAX ENERGY · ${MAX_ENERGY}` : '+1 MAX ENERGY · 80';
+  ui['buy-energy'].disabled = farm.maxEnergy >= MAX_ENERGY;
+  ui['buy-plot'].textContent = farm.unlockedPlots >= MAX_PLOTS
+    ? `ALL PLOTS · ${MAX_PLOTS}/${MAX_PLOTS}`
+    : `BUY PLOT · ${PLOT_PRICE} · ${farm.unlockedPlots}/${MAX_PLOTS}`;
+  ui['buy-plot'].disabled = farm.unlockedPlots >= MAX_PLOTS;
   ui['buy-carrot'].disabled = farm.day < 2;
   ui['buy-pumpkin'].disabled = farm.day < 4;
   ui['sell-all'].textContent = totalProduce() ? `SELL BASKET · ${totalProduce()}` : 'SELL BASKET';
@@ -548,6 +564,11 @@ function performAction(index, selectedAction = selectedTool) {
 function queueAction(index) {
   if (state !== 'PLAYING' || transitioning || queuedIndex !== null) return;
   selectedIndex = clamp(index, 0, farm.tiles.length - 1);
+  if (!farm.isPlotUnlocked(selectedIndex)) {
+    toast('Buy this plot first');
+    updateHud();
+    return;
+  }
   queuedIndex = selectedIndex;
   queuedTool = selectedTool;
   updateHud();
@@ -576,7 +597,7 @@ function startGame() {
 }
 
 const tutorialSteps = [
-  ['HOE YOUR FIRST PLOT', 'Select HOE, then tap the glowing field plot.'],
+  ['PLOW YOUR FIRST PLOT', 'Select PLOW, then tap the glowing field plot.'],
   ['PLANT A SEED', 'Choose TURNIP and tap the freshly tilled soil.'],
   ['WATER THE CROP', 'Choose WATER and tap the planted crop before sleeping.'],
   ['REST FOR THE NIGHT', 'Use SLEEP / NEXT DAY to grow every watered crop.'],
@@ -600,7 +621,7 @@ function hideTutorial() {
 function resetInteractionState() {
   queuedIndex = null;
   queuedTool = null;
-  selectedIndex = 0;
+  selectedIndex = 1;
   selectedTool = 'hoe';
   farmerRoot.position.set(-1.5, 0.1, -3.8);
   farmerRoot.rotation.set(0, Math.PI, 0);
@@ -693,6 +714,14 @@ ui['buy-energy'].addEventListener('click', () => {
   else toast(result.reason);
   updateHud();
 });
+ui['buy-plot'].addEventListener('click', () => {
+  if (state !== 'PLAYING' || transitioning) return;
+  unlockAudio();
+  const result = farm.buyPlot();
+  if (result.ok) { sound('coin'); toast(`Plot ${result.unlockedPlots} of ${MAX_PLOTS} unlocked!`, true); save(); }
+  else toast(result.reason);
+  updateHud();
+});
 for (const crop of Object.keys(CROPS)) {
   ui[`buy-${crop}`].addEventListener('click', () => {
     if (state !== 'PLAYING' || transitioning) return;
@@ -771,6 +800,7 @@ function updateDebug() {
     renderer,
     scene,
     camera,
+    tileGroups,
     selectTool,
     actTile: queueAction,
     endDay,

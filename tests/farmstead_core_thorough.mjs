@@ -25,25 +25,50 @@ test('fresh farm has complete bounded starting state', () => {
   assert.deepEqual(farm.seeds, { turnip: 6, carrot: 0, pumpkin: 0 });
   assert.deepEqual(farm.produce, { turnip: 0, carrot: 0, pumpkin: 0 });
   assert.equal(farm.tiles.length, 30);
+  assert.equal(farm.unlockedPlots, 20);
   assert.ok(farm.tiles.every(tile => tile.state === 'grass' && tile.crop === null && !tile.ready && !tile.watered));
+});
+
+test('locked plots reject work and can be purchased up to all 30', () => {
+  const farm = new FarmModel();
+  const starterPlots = [1, 2, 3, 4, 7, 8, 9, 10, 13, 14, 15, 16, 19, 20, 21, 22, 25, 26, 27, 28];
+  const expansionPlots = [0, 5, 6, 11, 12, 17, 18, 23, 24, 29];
+  assert.ok(starterPlots.every(index => farm.isPlotUnlocked(index)));
+  assert.ok(expansionPlots.every(index => !farm.isPlotUnlocked(index)));
+  unchangedAfter(farm, () => farm.act(0, 'hoe'));
+  farm.coins = 59;
+  unchangedAfter(farm, () => farm.buyPlot());
+  farm.coins = 60;
+  assert.deepEqual(farm.buyPlot(), { ok: true, spent: 60, unlockedPlots: 21, plotIndex: 0 });
+  const partialRestore = FarmModel.fromSnapshot(farm.snapshot());
+  assert.deepEqual([partialRestore.coins, partialRestore.unlockedPlots, partialRestore.isPlotUnlocked(0), partialRestore.isPlotUnlocked(5)], [0, 21, true, false]);
+  farm.coins = 540;
+  for (let unlocked = 22; unlocked <= 30; unlocked++) {
+    const result = farm.buyPlot();
+    assert.deepEqual(result, { ok: true, spent: 60, unlockedPlots: unlocked, plotIndex: expansionPlots[unlocked - 21] });
+  }
+  assert.equal(farm.coins, 0);
+  assert.equal(farm.act(29, 'hoe').ok, true);
+  unchangedAfter(farm, () => farm.buyPlot());
 });
 
 test('failed field actions are atomic and spend no energy', () => {
   const farm = new FarmModel();
   unchangedAfter(farm, () => farm.act(-1, 'hoe'));
   unchangedAfter(farm, () => farm.act(30, 'hoe'));
-  unchangedAfter(farm, () => farm.act(0, 'water'));
-  unchangedAfter(farm, () => farm.act(0, 'harvest'));
-  unchangedAfter(farm, () => farm.act(0, 'seed', 'turnip'));
-  unchangedAfter(farm, () => farm.act(0, 'shovel'));
+  unchangedAfter(farm, () => farm.act(1, 'water'));
+  unchangedAfter(farm, () => farm.act(1, 'harvest'));
+  unchangedAfter(farm, () => farm.act(1, 'seed', 'turnip'));
+  unchangedAfter(farm, () => farm.act(1, 'shovel'));
 });
 
 test('energy reaches zero exactly and blocks further valid work', () => {
   const farm = new FarmModel();
-  for (let index = 0; index < 14; index++) assert.equal(farm.act(index, 'hoe').ok, true);
+  const starterPlots = [1, 2, 3, 4, 7, 8, 9, 10, 13, 14, 15, 16, 19, 20];
+  for (const index of starterPlots) assert.equal(farm.act(index, 'hoe').ok, true);
   assert.equal(farm.energy, 0);
   const before = farm.snapshot();
-  assert.deepEqual(farm.act(14, 'hoe'), { ok: false, reason: 'Too tired' });
+  assert.deepEqual(farm.act(21, 'hoe'), { ok: false, reason: 'Too tired' });
   assert.deepEqual(farm.snapshot(), before);
   farm.endDay();
   assert.equal(farm.energy, 14);
@@ -51,75 +76,75 @@ test('energy reaches zero exactly and blocks further valid work', () => {
 
 test('unwatered crops do not grow and watering resets nightly', () => {
   const farm = new FarmModel();
-  farm.act(0, 'hoe');
-  farm.act(0, 'seed', 'turnip');
+  farm.act(1, 'hoe');
+  farm.act(1, 'seed', 'turnip');
   farm.endDay();
-  assert.deepEqual([farm.tiles[0].growth, farm.tiles[0].ready, farm.tiles[0].dryDays], [0, false, 1]);
-  farm.act(0, 'water');
+  assert.deepEqual([farm.tiles[1].growth, farm.tiles[1].ready, farm.tiles[1].dryDays], [0, false, 1]);
+  farm.act(1, 'water');
   farm.endDay();
-  assert.deepEqual([farm.tiles[0].growth, farm.tiles[0].ready, farm.tiles[0].watered, farm.tiles[0].dryDays], [1, true, false, 0]);
+  assert.deepEqual([farm.tiles[1].growth, farm.tiles[1].ready, farm.tiles[1].watered, farm.tiles[1].dryDays], [1, true, false, 0]);
 });
 
 test('a crop rots to tilled soil after two consecutive dry days', () => {
   const farm = new FarmModel();
-  farm.act(0, 'hoe');
-  farm.act(0, 'seed', 'turnip');
+  farm.act(1, 'hoe');
+  farm.act(1, 'seed', 'turnip');
   assert.equal(farm.endDay().rotted, 0);
-  assert.deepEqual([farm.tiles[0].state, farm.tiles[0].growth, farm.tiles[0].dryDays], ['planted', 0, 1]);
+  assert.deepEqual([farm.tiles[1].state, farm.tiles[1].growth, farm.tiles[1].dryDays], ['planted', 0, 1]);
   const result = farm.endDay();
   assert.deepEqual([result.rotted, result.dryRotted], [1, 1]);
-  assert.deepEqual(farm.tiles[0], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
+  assert.deepEqual(farm.tiles[1], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
 });
 
 test('planting during rain waters the new crop immediately', () => {
   const farm = new FarmModel();
-  farm.act(0, 'hoe');
-  assert.equal(farm.act(0, 'seed', 'turnip', { rainy: true }).ok, true);
-  assert.equal(farm.tiles[0].watered, true);
+  farm.act(1, 'hoe');
+  assert.equal(farm.act(1, 'seed', 'turnip', { rainy: true }).ok, true);
+  assert.equal(farm.tiles[1].watered, true);
   farm.endDay();
-  assert.equal(farm.tiles[0].ready, true);
+  assert.equal(farm.tiles[1].ready, true);
 });
 
 test('every crop requires exactly its configured watered days', () => {
   for (const [crop, config] of Object.entries(CROPS)) {
     const farm = new FarmModel();
     farm.seeds[crop] = 1;
-    farm.act(0, 'hoe');
-    farm.act(0, 'seed', crop);
+    farm.act(1, 'hoe');
+    farm.act(1, 'seed', crop);
     for (let day = 1; day <= config.growDays; day++) {
-      assert.equal(farm.act(0, 'water').ok, true);
+      assert.equal(farm.act(1, 'water').ok, true);
       farm.endDay();
-      assert.equal(farm.tiles[0].growth, day);
-      assert.equal(farm.tiles[0].ready, day === config.growDays);
+      assert.equal(farm.tiles[1].growth, day);
+      assert.equal(farm.tiles[1].ready, day === config.growDays);
     }
-    assert.equal(farm.act(0, 'harvest').ok, true);
+    assert.equal(farm.act(1, 'harvest').ok, true);
     assert.equal(farm.produce[crop], 1);
-    assert.equal(farm.tiles[0].state, 'tilled');
+    assert.equal(farm.tiles[1].state, 'tilled');
   }
 });
 
 test('mature crops rot when the third ready day would begin', () => {
   const farm = new FarmModel();
-  farm.act(0, 'hoe');
-  farm.act(0, 'seed', 'turnip');
-  farm.act(0, 'water');
+  farm.act(1, 'hoe');
+  farm.act(1, 'seed', 'turnip');
+  farm.act(1, 'water');
   assert.deepEqual(farm.endDay(), { day: 2, rotted: 0, dryRotted: 0 });
-  assert.deepEqual([farm.tiles[0].ready, farm.tiles[0].readyDays], [true, 0]);
+  assert.deepEqual([farm.tiles[1].ready, farm.tiles[1].readyDays], [true, 0]);
   assert.deepEqual(farm.endDay(), { day: 3, rotted: 0, dryRotted: 0 });
-  assert.deepEqual([farm.tiles[0].ready, farm.tiles[0].readyDays], [true, 1]);
+  assert.deepEqual([farm.tiles[1].ready, farm.tiles[1].readyDays], [true, 1]);
   assert.deepEqual(farm.endDay(), { day: 4, rotted: 1, dryRotted: 0 });
-  assert.deepEqual(farm.tiles[0], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
+  assert.deepEqual(farm.tiles[1], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
 });
 
 test('ready crops stop growing and remain harvestable through the second ready day', () => {
   const farm = new FarmModel();
-  farm.act(0, 'hoe');
-  farm.act(0, 'seed', 'turnip');
-  farm.act(0, 'water');
+  farm.act(1, 'hoe');
+  farm.act(1, 'seed', 'turnip');
+  farm.act(1, 'water');
   farm.endDay();
   farm.endDay();
-  assert.deepEqual([farm.tiles[0].growth, farm.tiles[0].ready], [1, true]);
-  assert.equal(farm.act(0, 'harvest').ok, true);
+  assert.deepEqual([farm.tiles[1].growth, farm.tiles[1].ready], [1, true]);
+  assert.equal(farm.act(1, 'harvest').ok, true);
 });
 
 test('seed purchases enforce unlocks amounts funds and atomicity', () => {
@@ -163,13 +188,13 @@ test('orders reject shortages atomically and cycle after completion', () => {
 
 test('snapshot is a deep copy and round trips valid state', () => {
   const farm = new FarmModel();
-  farm.act(0, 'hoe');
-  farm.act(0, 'seed', 'turnip');
-  farm.act(0, 'water');
+  farm.act(1, 'hoe');
+  farm.act(1, 'seed', 'turnip');
+  farm.act(1, 'water');
   const snapshot = farm.snapshot();
-  snapshot.tiles[0].state = 'grass';
+  snapshot.tiles[1].state = 'grass';
   snapshot.seeds.turnip = 999;
-  assert.equal(farm.tiles[0].state, 'planted');
+  assert.equal(farm.tiles[1].state, 'planted');
   assert.equal(farm.seeds.turnip, 5);
   const restored = FarmModel.fromSnapshot(farm.snapshot());
   assert.deepEqual(restored.snapshot(), farm.snapshot());
@@ -199,7 +224,7 @@ test('snapshot sanitizes invalid crop and tile combinations', () => {
 });
 
 test('unknown save versions and wrong tile counts fall back safely', () => {
-  const future = FarmModel.fromSnapshot({ version: 2, day: 99, coins: 999, tiles: Array(30).fill({ state: 'tilled' }) });
+  const future = FarmModel.fromSnapshot({ version: 3, day: 99, coins: 999, tiles: Array(30).fill({ state: 'tilled' }) });
   assert.deepEqual([future.day, future.coins, future.tiles[0].state], [1, 60, 'grass']);
   const short = FarmModel.fromSnapshot({ version: 1, day: 8, tiles: [] });
   assert.equal(short.day, 8);
@@ -227,8 +252,8 @@ test('energy upgrades cost 80 coins and permanently raise the daily maximum', ()
   assert.deepEqual(farm.buyEnergyUpgrade(), { ok: false, reason: 'Not enough coins' });
   assert.deepEqual(farm.snapshot(), before);
   assert.equal(FarmModel.fromSnapshot(farm.snapshot()).maxEnergy, 16);
-  farm.coins = 320;
-  for (let level = 17; level <= 20; level++) assert.equal(farm.buyEnergyUpgrade().maxEnergy, level);
+  farm.coins = 720;
+  for (let level = 17; level <= 25; level++) assert.equal(farm.buyEnergyUpgrade().maxEnergy, level);
   const capped = farm.snapshot();
   assert.deepEqual(farm.buyEnergyUpgrade(), { ok: false, reason: 'Energy is maxed' });
   assert.deepEqual(farm.snapshot(), capped);
@@ -238,18 +263,18 @@ test('legacy version-one saves receive safe energy, harvest-age, and dry-age def
   const tiles = Array.from({ length: 30 }, () => ({ state: 'grass' }));
   tiles[0] = { state: 'planted', crop: 'turnip', growth: 1, watered: false, ready: true };
   const restored = FarmModel.fromSnapshot({ version: 1, day: 9, energy: 12, tiles });
-  assert.deepEqual([restored.maxEnergy, restored.energy, restored.tiles[0].ready, restored.tiles[0].readyDays, restored.tiles[0].dryDays], [14, 12, true, 0, 0]);
+  assert.deepEqual([restored.maxEnergy, restored.energy, restored.unlockedPlots, restored.tiles[0].ready, restored.tiles[0].readyDays, restored.tiles[0].dryDays], [14, 12, 30, true, 0, 0]);
 });
 
 test('repeatable turnip loop can fund continued upgrades without bankruptcy', () => {
   const farm = new FarmModel();
-  assert.equal(farm.act(0, 'hoe').ok, true);
+  assert.equal(farm.act(1, 'hoe').ok, true);
   for (let cycle = 0; cycle < 20; cycle++) {
     if (farm.seeds.turnip === 0) assert.equal(farm.buySeeds('turnip').ok, true);
-    assert.equal(farm.act(0, 'seed', 'turnip').ok, true);
-    assert.equal(farm.act(0, 'water').ok, true);
+    assert.equal(farm.act(1, 'seed', 'turnip').ok, true);
+    assert.equal(farm.act(1, 'water').ok, true);
     farm.endDay();
-    assert.equal(farm.act(0, 'harvest').ok, true);
+    assert.equal(farm.act(1, 'harvest').ok, true);
     assert.equal(farm.sellAll().ok, true);
   }
   assert.equal(farm.earnings, 360);

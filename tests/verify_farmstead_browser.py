@@ -98,16 +98,32 @@ with sync_playwright() as p:
     assert page.locator("#field-guide").is_visible()
     guide_text = page.locator("#field-guide").inner_text()
     assert "RAIN: AUTO-WATERS CROPS + NEW SEEDS" in page.locator("#quest-card").inner_text()
-    for explanation in ["START WITH 6 TURNIP SEEDS", "TURNIP · 1 DAY · SELLS 18", "RAIN WATERS", "MATURE CROPS ROT", "80 coins"]:
+    for explanation in ["START WITH 6 TURNIP SEEDS", "START WITH 20 PLOTS", "BUY ANOTHER PLOT FOR 60 COINS", "TURNIP · 1 DAY · SELLS 18", "RAIN WATERS", "MATURE CROPS ROT", "up to 25"]:
         assert explanation in guide_text, guide_text
     page.locator("#guide-close").click()
 
     page.locator("#new-game").click()
     assert page.evaluate("__game.state") == "PLAYING"
     assert page.locator("#tutorial").is_visible()
-    assert "HOE" in page.locator("#tutorial").inner_text()
+    assert "PLOW" in page.locator("#tutorial").inner_text()
+    assert page.locator("#tool-hoe").inner_text().startswith("PLOW")
     page.locator("#tutorial-skip").click()
     assert covered_tile_centers(page) == []
+    plot_access = page.evaluate("""() => ({
+      count: __game.farm.unlockedPlots,
+      unlocked: [...Array(30).keys()].filter(index => __game.farm.isPlotUnlocked(index)),
+      lockedVisuals: __game.tileGroups.map(group => group.userData.locked)
+    })""")
+    assert plot_access["count"] == 20, plot_access
+    assert plot_access["unlocked"] == [1,2,3,4,7,8,9,10,13,14,15,16,19,20,21,22,25,26,27,28], plot_access
+    assert [index for index, locked in enumerate(plot_access["lockedVisuals"]) if locked] == [0,5,6,11,12,17,18,23,24,29], plot_access
+    page.evaluate("__game.actTile(0)")
+    page.wait_for_timeout(100)
+    assert page.evaluate("[__game.farm.energy,document.getElementById('message').textContent]") == [14,"Buy this plot first"]
+    page.evaluate("__game.farm.coins=60; __game.refresh()")
+    page.locator("#buy-plot").click()
+    assert page.evaluate("[__game.farm.coins,__game.farm.unlockedPlots,__game.farm.isPlotUnlocked(0),__game.tileGroups[0].userData.locked]") == [0,21,True,False]
+    assert "21/30" in page.locator("#buy-plot").inner_text()
 
     # The visible Harvest Board control must work through an actual pointer click.
     page.evaluate("__game.farm.produce.turnip=3; __game.refresh()")
@@ -116,21 +132,24 @@ with sync_playwright() as p:
     page.evaluate("__game.farm.coins=80; __game.refresh()")
     page.locator("#buy-energy").click()
     assert page.evaluate("[__game.farm.coins,__game.farm.energy,__game.farm.maxEnergy]") == [0, 15, 15]
+    page.evaluate("__game.farm.coins=80; __game.farm.maxEnergy=24; __game.farm.energy=24; __game.refresh()")
+    page.locator("#buy-energy").click()
+    assert page.evaluate("[__game.farm.coins,__game.farm.energy,__game.farm.maxEnergy,document.getElementById('buy-energy').disabled]") == [0,25,25,True]
 
     # A queued action from an abandoned run must never mutate a newly reset farm.
-    page.evaluate("__game.actTile(29)")
+    page.evaluate("__game.actTile(28)")
     page.locator("#pause-toggle").click()
     page.locator("#pause .menu-return").click()
     page.locator("#new-game").click()
     page.wait_for_timeout(3000)
-    assert page.evaluate("[__game.farm.energy,__game.farm.tiles[29].state,__game.selectedTool]") == [14, "grass", "hoe"]
+    assert page.evaluate("[__game.farm.energy,__game.farm.tiles[28].state,__game.selectedTool]") == [14, "grass", "hoe"]
 
     # Sleeping must cancel movement queued on the previous day.
     page.evaluate("__game.farm.coins=500; __game.farm.produce.turnip=3; __game.refresh(); __game.actTile(28); __game.endDay()")
     assert page.evaluate("[__game.transitioning,document.getElementById('night-transition').classList.contains('show')]") == [True, True]
     blocked_before = page.evaluate("[JSON.stringify(__game.farm.snapshot()),__game.selectedTool]")
     page.evaluate("""() => {
-      for (const id of ['buy-turnip','buy-carrot','buy-pumpkin','buy-energy','sell-all','deliver-order','tool-water']) document.getElementById(id).click();
+      for (const id of ['buy-turnip','buy-carrot','buy-pumpkin','buy-energy','buy-plot','sell-all','deliver-order','tool-water']) document.getElementById(id).click();
       dispatchEvent(new KeyboardEvent('keydown',{key:'2'}));
       __game.actTile(0);
     }""")
@@ -187,7 +206,7 @@ with sync_playwright() as p:
       const leg=__game.scene.getObjectByName('leg-left');
       return {x:farmer.position.x,z:farmer.position.z,q:leg.quaternion.toArray()};
     }""")
-    click_tile(page, 0)
+    click_tile(page, 1)
     page.wait_for_timeout(180)
     animation_after = page.evaluate("""() => {
       const farmer=__game.scene.getObjectByName('farmer-avatar');
@@ -196,7 +215,7 @@ with sync_playwright() as p:
     }""")
     assert (animation_after["x"], animation_after["z"]) != (animation_before["x"], animation_before["z"])
     assert animation_after["q"] != animation_before["q"], (animation_before, animation_after)
-    page.wait_for_function("__game.farm.tiles[0].state === 'tilled'")
+    page.wait_for_function("__game.farm.tiles[1].state === 'tilled'")
     hat_samples = []
     for _ in range(6):
         hat_samples.append(page.evaluate("""() => { const root=__game.scene.getObjectByName('farmer-avatar'),hat=__game.scene.getObjectByName('straw-hat'),point=hat.getWorldPosition(hat.position.clone()); return root.worldToLocal(point).toArray(); }"""))
@@ -205,17 +224,17 @@ with sync_playwright() as p:
     assert page.evaluate("__game.farm.energy") == 13
 
     page.locator("#tool-turnip").click()
-    click_tile(page, 0)
-    page.wait_for_function("__game.farm.tiles[0].crop === 'turnip'")
+    click_tile(page, 1)
+    page.wait_for_function("__game.farm.tiles[1].crop === 'turnip'")
     page.locator("#tool-water").click()
-    click_tile(page, 0)
-    page.wait_for_function("__game.farm.tiles[0].watered === true")
+    click_tile(page, 1)
+    page.wait_for_function("__game.farm.tiles[1].watered === true")
     page.locator("#end-day").click()
-    assert page.evaluate("[__game.farm.day,__game.farm.tiles[0].ready]") == [2, True]
+    assert page.evaluate("[__game.farm.day,__game.farm.tiles[1].ready]") == [2, True]
     page.wait_for_function("!__game.transitioning")
 
     page.locator("#tool-harvest").click()
-    click_tile(page, 0)
+    click_tile(page, 1)
     page.wait_for_function("__game.farm.produce.turnip === 1")
     page.locator("#sell-all").click()
     assert page.evaluate("[__game.farm.coins,__game.farm.earnings,__game.farm.produce.turnip]") == [78, 18, 0]
@@ -254,7 +273,7 @@ with sync_playwright() as p:
     page.locator("#guide-close").click()
     assert page.evaluate("__game.state") == "PLAYING"
     mobile = page.evaluate("""() => {
-      const ids=['tool-hoe','tool-water','tool-turnip','tool-carrot','tool-pumpkin','tool-harvest','buy-turnip','buy-carrot','buy-pumpkin','buy-energy','sell-all','end-day'];
+      const ids=['tool-hoe','tool-water','tool-turnip','tool-carrot','tool-pumpkin','tool-harvest','buy-turnip','buy-carrot','buy-pumpkin','buy-energy','buy-plot','sell-all','end-day'];
       const boxes=ids.map(id => {const b=document.getElementById(id).getBoundingClientRect();return [id,b.left,b.right,b.width,b.height];});
       return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,boxes,errors:__errors.slice()};
     }""")
