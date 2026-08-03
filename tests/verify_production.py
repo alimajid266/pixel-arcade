@@ -14,6 +14,9 @@ try:
     assert home==['Pixel Arcade',BASE+'/',[]],home
     assert d.find_element(By.ID,'play-flappy').get_attribute('href')==BASE+'/flappy/'
     assert d.find_element(By.ID,'play-zombie').get_attribute('href')==BASE+'/zombie-defense/'
+    assert d.find_element(By.ID,'play-road-hop').get_attribute('href')==BASE+'/road-hop/'
+    assert d.find_element(By.ID,'play-farmstead').get_attribute('href')==BASE+'/farmstead/'
+    assert d.find_element(By.ID,'play-panic-button').get_attribute('href')==BASE+'/panic-button/'
 
     d.find_element(By.ID,'play-flappy').click();time.sleep(.7)
     flappy=d.execute_script("return [document.title,__game.machine.name,__errors.slice(),__game.sound.context===null,location.pathname]")
@@ -29,7 +32,13 @@ try:
 
     d.find_element(By.CSS_SELECTOR,'.rail-brand').click();time.sleep(.5)
     assert d.current_url==BASE+'/' and d.title=='Pixel Arcade',(d.current_url,d.title)
+    d.find_element(By.ID,'play-panic-button').click();time.sleep(.7)
+    panic=d.execute_script("return [document.title,__game.state.running,__game.errors.slice(),__game.audio.ctx===null,location.pathname]")
+    assert panic==['PANIC BUTTON // CONTROL STATION 04',False,[],True,'/panic-button/'],panic
+    d.find_element(By.ID,'start').click();time.sleep(1.0)
+    panic_started=d.execute_script("return [__game.state.running,__game.audio.ctx!==null,__game.errors.slice(),document.querySelectorAll('.mechanical').length]")
+    assert panic_started==[True,True,[],4],panic_started
     d.save_screenshot('/tmp/pixel-arcade-production.png')
-    print('PIXEL ARCADE PRODUCTION PASS:',home,flappy,zombie)
+    print('PIXEL ARCADE PRODUCTION PASS:',home,flappy,zombie,panic,panic_started)
 finally:
     d.quit()

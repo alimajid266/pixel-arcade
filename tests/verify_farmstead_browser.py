@@ -290,7 +290,7 @@ with sync_playwright() as p:
         const b=card.getBoundingClientRect();return [card.id,b.left,b.right,b.width,b.height];
       })
     })""")
-    assert launcher["errors"] == [] and len(launcher["cards"]) == 4, launcher
+    assert launcher["errors"] == [] and len(launcher["cards"]) == 5, launcher
     for _, left, right, width, height in launcher["cards"]:
         assert left >= 0 and right <= 390 and width >= 300 and height >= 200, launcher
     page.screenshot(path="/tmp/pixel-arcade-home-390-full.png", full_page=True)

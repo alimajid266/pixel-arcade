@@ -3,12 +3,13 @@
 [![Production](https://img.shields.io/badge/production-live-8bc34a)](https://pixel-arcade-pied.vercel.app)
 [![Architecture](https://img.shields.io/badge/architecture-static%20Canvas%20%2B%20WebGL-6c3fc5)](#technical-architecture)
 
-**Pixel Arcade** is a small browser arcade whose current working tree contains four complete games behind one launcher:
+**Pixel Arcade** is a small browser arcade whose current working tree contains five complete games behind one launcher:
 
 - **Flappy Canvas** — a reflex-based endless flying game.
 - **Zombie Defense: Last Outpost** — a 12-wave tactical tower-defense campaign.
 - **Road Hop** — a low-poly 3D traffic-crossing game with four biomes, six original cosmetic characters, Endless, and a 50-row Road Rally.
 - **Harvest Hollow** — an endless top-down 2.5D farming simulator with crops, weather, market orders, seed unlocks, crop spoilage, and permanent energy upgrades.
+- **Panic Button** — a psychological-horror control-console game about following increasingly untrustworthy timed directives.
 
 The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. New local changes remain unpublished until an explicitly authorized GitHub push and Vercel release.
 
@@ -23,6 +24,7 @@ The currently published arcade is at **https://pixel-arcade-pied.vercel.app**. N
 - [Zombie Defense difficulty model](#zombie-defense-difficulty-model)
 - [Road Hop specification](#road-hop-specification)
 - [Harvest Hollow specification](#harvest-hollow-specification)
+- [Panic Button specification](#panic-button-specification)
 - [Design decisions](#design-decisions)
 - [Repository structure](#repository-structure)
 - [Local development](#local-development)
@@ -89,6 +91,12 @@ Harvest Hollow is a compact endless farming simulator rendered as a bold, candy-
 
 It includes a blocky CC0 Kenney character with procedural limb animation, cohesive CC0 suburban scenery, an expanded checkerboard terrain framed by a 31-tree forest, first-run onboarding and a persistent Field Guide, three crops with explicit growth and sale values, deterministic rainy days that also water newly planted seeds, a two-ready-day harvest window before rot, keyboard/touch plot interaction, guarded local save recovery, synthesized feedback audio, pause, and desktop/portrait-phone layouts. The windmill is a four-blade landmark rather than a completion gate, so orders and farming continue indefinitely.
 
+### Panic Button
+
+Panic Button places the player at an industrial control station with four mechanical buttons. Its five named protocols are CALIBRATION (safe training), COMPOUND (double and hold), BREACH (sequences, delays, and visible forgeries), BLACKOUT (hidden authorization), and COLLAPSE (three-input sequences, shortest timers, and maximum interference). COMPUTER, SUPERVISOR, and EMERGENCY are always valid sources; UNKNOWN and YOU are always forged. A skipped binding order costs 8–12 integrity according to complexity, while valid passive and forged orders require no input. The underlying rules remain deterministic even when alarms, labels, and telemetry become hostile.
+
+It includes press, avoid, wait, hold, double-press, ordered-sequence, and delayed-press directives; five text channels; five escalation phases; synthesized Web Audio; locally vendored OFL pixel fonts; desktop and portrait-phone layouts; and a same-origin return to Pixel Arcade.
+
 ---
 
 ## Project and game scope
@@ -98,9 +106,9 @@ It includes a blocky CC0 Kenney character with procedural limb animation, cohesi
 **In scope**
 
 - One static launcher at `/`.
-- Four playable games at `/flappy/`, `/zombie-defense/`, `/road-hop/`, and `/farmstead/`.
+- Five playable games at `/flappy/`, `/zombie-defense/`, `/road-hop/`, `/farmstead/`, and `/panic-button/`.
 - Same-origin navigation from the launcher and in-game return/navigation controls.
-- Responsive desktop and mobile presentation, including portrait play for Flappy Canvas, Road Hop, and Harvest Hollow.
+- Responsive desktop and mobile presentation, including portrait play for Flappy Canvas, Road Hop, Harvest Hollow, and Panic Button.
 - A Zombie Defense portrait orientation gate at widths up to 736 px where its wider tactical UI would be too small to use safely.
 - Local browser persistence for preferences and records.
 - Static deployment through one GitHub repository and one Vercel project.
@@ -267,7 +275,8 @@ Browser
 ├── /flappy/                → flappy/index.html
 ├── /zombie-defense/        → zombie-defense/index.html
 ├── /road-hop/              → road-hop/index.html + local Three.js module
-└── /farmstead/             → Harvest Hollow shell, model, and Three.js scene
+├── /farmstead/             → Harvest Hollow shell, model, and Three.js scene
+└── /panic-button/          → Panic Button DOM/CSS console and modular rules
 ```
 
 After the static files are delivered, gameplay runs entirely in the browser:
@@ -705,6 +714,40 @@ The orthographic camera keeps all 30 plots readable while retaining real 3D dept
 
 ---
 
+## Panic Button specification
+
+### Directive, channel, and authorization rules
+
+The CRT output is an order; the player's button interaction is the required input. The opening two directives are retryable training and cannot reduce integrity.
+
+| CRT output | Required input | Success output |
+|---|---|---|
+| `PRESS COLOR` | Press that color once before timeout | Accepted immediately |
+| `DO NOT TOUCH COLOR` / `WAIT` | Make no input until timeout | Accepted when the timer empties |
+| `PRESS COLOR TWICE` | Press that color twice | Accepted after press two |
+| `HOLD COLOR` | Hold that control for at least `650ms` | Accepted on release |
+| `SEQUENCE: A / B` | Press A and then B | Order matters |
+| `PRESS COLOR AFTER 3` | Wait three seconds, then press before timeout | An early press fails |
+| `AUTH: INVALID` | Make no input, regardless of the displayed command | Forged order ignored at timeout |
+
+`CHANNEL` identifies the current speaker: Computer, Supervisor, Unknown, Emergency, or You. Computer, Supervisor, and Emergency are always valid; Unknown and You are always forged. Later protocols can obscure authorization as `AUTH: UNCLEAR`; the central **Verify** control—Panic Button's meaningful emergency function—reveals the status once per directive and grants 1.2 seconds for the check. The field manual is available before and during play, pauses the active timer while open, and gives concrete input/output examples.
+
+Pointer-down is deliberately ignored as a completed action; pointer-up classifies the interaction as a press or hold. Space and Enter support native keyboard activation. Completed actions are deadline-checked, and gestures are bound to the directive under which they started, preventing stale cross-directive releases. An incorrect color, wrong input type, early delayed press, active-directive timeout, or any press during a passive/forged directive is a real error. Passive and forged directives succeed on timeout. Mechanical feedback always states why integrity changed; unreliable narration cannot falsify rule outcomes.
+
+### Escalation and fairness
+
+Protocols change at directive rounds `3`, `6`, `10`, and `15`, bringing varied input types and trust decisions into play earlier. Generated directive types do not immediately repeat. Computer, Supervisor, and Emergency orders authenticate consistently; Unknown and You are forged sources. Authorization is visible when the trust mechanic is introduced and becomes obscured only in later protocols, where Verify or a learned channel pattern provides a fair decision path.
+
+Random control-disable events choose only from colors required by neither the active directive nor its sequence. Event timers are tracked and cleared when a new shift starts. Temporary label corruption restores labels in place instead of replacing controls, preserving pointer capture during holds. AudioContext creation remains deferred until **Begin Training**.
+
+### Architecture and limits
+
+Panic Button uses semantic DOM controls and CSS rather than Canvas. This provides native button input, crisp responsive type, and straightforward pointer/hold behavior while preserving the physical-console presentation. `game.js` wires the state machine; `rules.mjs` owns pure outcomes and authorization behavior; instruction, event, button, narrator, audio, effect, UI, and state modules remain separate for future voice acting, authored endings, persistence, achievements, and additional controls.
+
+The current release is a compact endless survival shift with authored onboarding, a field manual, authorization decisions, and a once-per-order verifier. It does not yet include recorded voice acting, save data, achievements, alternate endings, or a global leaderboard.
+
+---
+
 ## Design decisions
 
 | Decision | Reason and tradeoff |
@@ -752,6 +795,11 @@ pixel-arcade/
 │   ├── farm-core.mjs                  # Pure crop/economy/save model
 │   ├── ASSET-LICENSES.md              # Model sources, licenses, and hashes
 │   └── assets/                        # Licensed voxel models, textures, and local game font
+├── panic-button/
+│   ├── index.html                     # Industrial console shell
+│   ├── styles.css                     # CRT, metal panel, mechanical controls, responsive layout
+│   ├── js/                            # Rules, state, input, events, audio, narrator, and UI modules
+│   └── assets/fonts/                  # Local OFL Press Start 2P and VT323 fonts
 ├── vendor/
 │   ├── three.module.min.js            # Pinned Three.js r170 module
 │   ├── GLTFLoader.js                  # Matching locally patched GLB loader
@@ -780,6 +828,8 @@ pixel-arcade/
 │   ├── farmstead_core_thorough.mjs    # 20-scenario state-machine and economy regression suite
 │   ├── verify_farmstead_source.py     # Local assets/imports/integration contract
 │   ├── verify_farmstead_browser.py    # Chromium WebGL interaction and mobile QA
+│   ├── panic_button_rules.mjs         # Pure directive, phase, validation, and fairness rules
+│   ├── verify_panic_button.py         # Real browser mechanics, audio, mobile, and runtime QA
 │   ├── verify_latest_feedback.py      # Latest user-feedback acceptance checks
 │   └── verify_production.py           # Production browser smoke test
 └── README.md
@@ -804,6 +854,7 @@ Open:
 - Zombie Defense: http://127.0.0.1:8770/zombie-defense/
 - Road Hop: http://127.0.0.1:8770/road-hop/
 - Harvest Hollow: http://127.0.0.1:8770/farmstead/
+- Panic Button: http://127.0.0.1:8770/panic-button/
 
 Do not use the development server as a public production server.
 
@@ -844,6 +895,8 @@ In another terminal:
 .venv/bin/python tests/verify_farmstead_source.py
 .venv/bin/python tests/verify_farmstead_browser.py
 node tests/farmstead_core.mjs
+node tests/panic_button_rules.mjs
+.venv/bin/python tests/verify_panic_button.py
 .venv/bin/python tests/verify_latest_feedback.py
 ```
 
@@ -855,7 +908,7 @@ Production smoke test:
 
 The regression suite covers, among other behavior:
 
-- launcher and same-origin navigation across all four games;
+- launcher and same-origin navigation across all five games;
 - Canvas/WebGL runtime errors and initial states;
 - Road Hop's real Three.js renderer, orthographic camera, generated lane bounds, renderer-memory stability across retries, UI-button start/retry/resume/touch-pause paths, one-cell movement, score monotonicity, tree blocking, pause/resume, vehicle collision, local best-score reload, exact `390×844` swipe/cancel mapping, and responsive backing buffer;
 - Flappy scoring, pacing, ghost orientation/visibility, pause, and menu geometry;
@@ -869,12 +922,13 @@ The regression suite covers, among other behavior:
 - map preview and utility-control geometry;
 - sidebar/toolbar separation, Canvas aspect ratio, scaled input, Flappy portrait play, and the Zombie portrait gate.
 - Harvest Hollow's complete hoe/plant/water/day/harvest/sell loop, pause/resume, persistence reload, licensed-model loading, empty runtime-error capture, and exact `390×844` six-tool geometry.
+- Panic Button's pure directive validation and outcomes, phase boundaries, fair disabled-control selection, real press/double/sequence/hold/delayed/passive interactions, active/passive timeout behavior, deferred audio, local-only assets, runtime-error capture, and exact `390×844` control geometry.
 
 ---
 
 ## Deployment
 
-Production is deployed as one static Vercel project connected to the repository's `main` branch. The Harvest Hollow changes documented here are locally verified but are **not yet present in production**; publishing them requires explicit release approval.
+Production is deployed as one static Vercel project connected to the repository's `main` branch. A release is published only after explicit approval, local verification, and an authorized push to `main`.
 
 - Repository: https://github.com/alimajid266/pixel-arcade
 - Production: https://pixel-arcade-pied.vercel.app

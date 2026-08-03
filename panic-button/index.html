@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080c0b">
+  <title>PANIC BUTTON // CONTROL STATION 04</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="noise"></div>
+  <main id="machine" class="machine">
+    <header class="top-rail">
+      <a class="brand" href="/" aria-label="Return to Pixel Arcade"><span class="hazard">///</span> ← PIXEL ARCADE</a>
+      <div class="serial">STATION 04 · UNIT PB-77</div>
+      <button id="audio-toggle" aria-label="Toggle sound">SOUND: ARMED</button>
+    </header>
+
+    <section class="console-grid">
+      <section class="main-panel metal-panel">
+        <div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="status-strip">
+          <span><i id="status-light" class="lamp green"></i> SYSTEM <b id="system-status">STANDBY</b></span>
+          <span class="classified">RESTRICTED ACCESS</span>
+          <span id="phase-label">PROTOCOL 01 — CALIBRATION</span>
+        </div>
+
+        <div id="crt" class="crt">
+          <div class="crt-content">
+            <div class="speaker-row"><span id="speaker-indicator">COMPUTER</span><span id="signal">AUTH: STANDBY</span></div>
+            <div id="instruction" class="instruction">AWAITING OPERATOR</div>
+            <div id="subtext" class="subtext">Read the field guide before beginning.</div>
+            <div id="response-hint" class="response-hint">YOUR INPUT: —</div>
+            <div id="timer-wrap" class="timer-wrap"><div id="timer-bar"></div></div>
+          </div>
+        </div>
+
+        <div class="warning-plate">⚠ ACTIVE ORDERS EXPIRE · WAIT ORDERS SUCCEED WITH NO INPUT</div>
+        <div id="button-bank" class="button-bank"></div>
+
+        <div class="lower-controls">
+          <div class="guide-station">
+            <span>FIELD MANUAL</span>
+            <button id="guide-button" class="guide-button" type="button"><b>?</b> OPEN GUIDE</button>
+          </div>
+          <button id="panic-button" class="panic" type="button" aria-label="Verify the current order">
+            <span>ORDER CHECK</span><b>VERIFY</b><small id="panic-status">READY</small>
+          </button>
+          <div class="pressure">
+            <span>SYSTEM PRESSURE</span>
+            <div id="pressure-segments" class="pressure-segments" aria-label="System pressure">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <small id="pressure-label">NOMINAL</small>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel metal-panel">
+        <div class="screw tl"></div><div class="screw tr"></div>
+        <h2>TELEMETRY</h2>
+        <div class="readout"><span>SHIFT TIME</span><b id="time">00:00</b></div>
+        <div class="readout"><span>RECORDED ERRORS</span><b id="mistakes">00</b></div>
+        <div class="readout"><span>INTEGRITY</span><b id="integrity">100%</b></div>
+        <div class="integrity-track"><i id="integrity-bar"></i></div>
+        <div class="speaker-log">
+          <h3>ACTIVE CHANNEL</h3><b id="channel">—</b><small id="trust">ORDER STATUS: NONE</small>
+        </div>
+        <div class="paper">
+          <b>OPERATOR NOTICE</b>
+          <p>CHANNEL = WHO IS SPEAKING.<br>COMPUTER / SUPERVISOR / EMERGENCY = VALID.<br>UNKNOWN / YOU = FORGED.<br>AUTH UNCLEAR = JUDGE SOURCE OR VERIFY.</p>
+          <span>FORM 18-B</span>
+        </div>
+        <div class="vents"><i></i><i></i><i></i><i></i><i></i></div>
+      </aside>
+    </section>
+    <footer><span>PROPERTY OF THE CONTINUITY DIRECTORATE</span><span id="footer-message">NO EXTERNAL SIGNAL</span></footer>
+  </main>
+
+  <div id="overlay" class="overlay">
+    <div class="boot-card">
+      <a class="boot-home" href="/">← PIXEL ARCADE</a>
+      <div class="boot-logo">PB</div>
+      <p class="eyebrow">CONTROL STATION 04</p>
+      <h1>PANIC BUTTON</h1>
+      <div class="quick-rules">
+        <b>YOUR JOB</b>
+        <p>Read the CRT order and provide the matching button input before the timer empties.</p>
+        <p><strong>WAIT / DO NOTHING:</strong> touch nothing. This succeeds when the timer ends.</p>
+        <p><strong>AUTH INVALID:</strong> the order is forged. Touch nothing.</p>
+      </div>
+      <div class="boot-actions">
+        <button id="boot-guide" class="secondary-action" type="button">READ FIELD MANUAL</button>
+        <button id="start" type="button">BEGIN TRAINING</button>
+      </div>
+      <small>FIRST TWO ORDERS ARE SAFE TRAINING · HEADPHONES RECOMMENDED</small>
+    </div>
+  </div>
+
+  <dialog id="guide-dialog" class="guide-dialog">
+    <form method="dialog" class="guide-card">
+      <div class="guide-heading"><div><small>FORM PB-01</small><h2>OPERATOR FIELD MANUAL</h2></div><button id="close-guide" value="close" aria-label="Close guide">×</button></div>
+      <section class="guide-summary">
+        <p><b>OBJECTIVE:</b> Keep INTEGRITY above 0%. Skipping a binding active order costs 8–12 integrity depending on complexity. WAIT, DO NOTHING, and forged orders require no input.</p>
+        <p><b>CHANNEL TRUST:</b> COMPUTER, SUPERVISOR, and EMERGENCY orders are always valid. UNKNOWN and YOU are always forged. When authorization is hidden, use this source rule or spend <em>VERIFY</em>.</p>
+        <p><b>VERIFY:</b> Once per order, the Panic Button reveals whether the current order is real and grants 1.2 seconds. It does not damage integrity.</p>
+      </section>
+      <section class="protocol-manual" aria-label="Protocol explanations">
+        <h3>PROTOCOL PROGRESSION</h3>
+        <div class="protocol-list">
+          <article><b>PROTOCOL 01 — CALIBRATION</b><span>Rounds 1–2 · Safe press/no-input training. No integrity loss.</span></article>
+          <article><b>PROTOCOL 02 — COMPOUND</b><span>Rounds 3–5 · Double-press and hold orders begin.</span></article>
+          <article><b>PROTOCOL 03 — BREACH</b><span>Rounds 6–9 · Sequences, delays, and visible forged orders.</span></article>
+          <article><b>PROTOCOL 04 — BLACKOUT</b><span>Rounds 10–14 · Authorization is hidden. Judge the channel or Verify.</span></article>
+          <article><b>PROTOCOL 05 — COLLAPSE</b><span>Round 15+ · Fastest timer, three-button sequences, highest-complexity orders and maximum interference.</span></article>
+        </div>
+      </section>
+      <div class="guide-table" role="table" aria-label="Input and output examples">
+        <div class="guide-row guide-head" role="row"><span>CRT OUTPUT</span><span>YOUR INPUT</span><span>EXPECTED RESULT</span></div>
+        <div class="guide-row guide-example" role="row"><b>PRESS RED</b><span>Press Red once</span><span>Accepted immediately</span></div>
+        <div class="guide-row guide-example" role="row"><b>PRESS BLUE TWICE</b><span>Press Blue two times</span><span>Accepted after press 2</span></div>
+        <div class="guide-row guide-example" role="row"><b>HOLD GREEN</b><span>Hold Green ≥ 0.65 sec</span><span>Accepted on release</span></div>
+        <div class="guide-row guide-example" role="row"><b>SEQUENCE: RED / YELLOW</b><span>Red, then Yellow</span><span>Order matters</span></div>
+        <div class="guide-row guide-example" role="row"><b>PRESS BLUE AFTER 3</b><span>Wait 3 sec, then Blue</span><span>Early press fails</span></div>
+        <div class="guide-row guide-example" role="row"><b>WAIT / DO NOTHING</b><span>NO INPUT</span><span>Accepted at timer end</span></div>
+        <div class="guide-row guide-example" role="row"><b>DO NOT TOUCH YELLOW</b><span>NO INPUT</span><span>Accepted at timer end</span></div>
+        <div class="guide-row guide-example" role="row"><b>AUTH: INVALID</b><span>NO INPUT</span><span>Forged order ignored</span></div>
+      </div>
+      <button class="manual-close" value="close">RETURN TO CONSOLE</button>
+    </form>
+  </dialog>
+
+  <div id="flash" class="flash"></div>
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>

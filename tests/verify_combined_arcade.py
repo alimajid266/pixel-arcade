@@ -15,6 +15,7 @@ try:
     assert d.find_element(By.ID,'play-zombie').get_attribute('href')==URL+'/zombie-defense/'
     assert d.find_element(By.ID,'play-road-hop').get_attribute('href')==URL+'/road-hop/'
     assert d.find_element(By.ID,'play-farmstead').get_attribute('href')==URL+'/farmstead/'
+    assert d.find_element(By.ID,'play-panic-button').get_attribute('href')==URL+'/panic-button/'
     assert d.execute_script('return window.__errors')==[]
     d.save_screenshot('/tmp/pixel-arcade-home.png')
 
@@ -50,10 +51,15 @@ try:
 
     d.find_element(By.CSS_SELECTOR,'.rail-brand').click();time.sleep(.25)
     assert d.current_url==URL+'/' and d.title=='Pixel Arcade',(d.current_url,d.title)
+    d.find_element(By.ID,'play-panic-button').click();time.sleep(.4)
+    panic=d.execute_script("return [document.title,__game.state.running,__game.errors.slice(),__game.audio.ctx===null,document.querySelector('.brand').getAttribute('href')]")
+    assert panic==['PANIC BUTTON // CONTROL STATION 04',False,[],True,'/'],panic
+    d.find_element(By.CSS_SELECTOR,'.boot-home').click();time.sleep(.25)
+    assert d.current_url==URL+'/' and d.title=='Pixel Arcade',(d.current_url,d.title)
     d.set_window_size(390,844);d.get(URL+'/');time.sleep(.25)
     mobile=d.execute_script("return [document.documentElement.scrollWidth,window.innerWidth,document.querySelectorAll('.game-card').length,window.__errors.slice()]")
-    assert mobile[0]<=mobile[1] and mobile[2:]==[4,[]],mobile
+    assert mobile[0]<=mobile[1] and mobile[2:]==[5,[]],mobile
     d.save_screenshot('/tmp/pixel-arcade-home-mobile.png')
-    print('COMBINED PIXEL ARCADE PASS:',flappy,zombie,mobile)
+    print('COMBINED PIXEL ARCADE PASS:',flappy,zombie,panic,mobile)
 finally:
     d.quit()
