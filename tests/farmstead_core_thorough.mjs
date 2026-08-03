@@ -54,10 +54,21 @@ test('unwatered crops do not grow and watering resets nightly', () => {
   farm.act(0, 'hoe');
   farm.act(0, 'seed', 'turnip');
   farm.endDay();
-  assert.deepEqual([farm.tiles[0].growth, farm.tiles[0].ready], [0, false]);
+  assert.deepEqual([farm.tiles[0].growth, farm.tiles[0].ready, farm.tiles[0].dryDays], [0, false, 1]);
   farm.act(0, 'water');
   farm.endDay();
-  assert.deepEqual([farm.tiles[0].growth, farm.tiles[0].ready, farm.tiles[0].watered], [1, true, false]);
+  assert.deepEqual([farm.tiles[0].growth, farm.tiles[0].ready, farm.tiles[0].watered, farm.tiles[0].dryDays], [1, true, false, 0]);
+});
+
+test('a crop rots to tilled soil after two consecutive dry days', () => {
+  const farm = new FarmModel();
+  farm.act(0, 'hoe');
+  farm.act(0, 'seed', 'turnip');
+  assert.equal(farm.endDay().rotted, 0);
+  assert.deepEqual([farm.tiles[0].state, farm.tiles[0].growth, farm.tiles[0].dryDays], ['planted', 0, 1]);
+  const result = farm.endDay();
+  assert.deepEqual([result.rotted, result.dryRotted], [1, 1]);
+  assert.deepEqual(farm.tiles[0], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
 });
 
 test('planting during rain waters the new crop immediately', () => {
@@ -92,12 +103,12 @@ test('mature crops rot when the third ready day would begin', () => {
   farm.act(0, 'hoe');
   farm.act(0, 'seed', 'turnip');
   farm.act(0, 'water');
-  assert.deepEqual(farm.endDay(), { day: 2, rotted: 0 });
+  assert.deepEqual(farm.endDay(), { day: 2, rotted: 0, dryRotted: 0 });
   assert.deepEqual([farm.tiles[0].ready, farm.tiles[0].readyDays], [true, 0]);
-  assert.deepEqual(farm.endDay(), { day: 3, rotted: 0 });
+  assert.deepEqual(farm.endDay(), { day: 3, rotted: 0, dryRotted: 0 });
   assert.deepEqual([farm.tiles[0].ready, farm.tiles[0].readyDays], [true, 1]);
-  assert.deepEqual(farm.endDay(), { day: 4, rotted: 1 });
-  assert.deepEqual(farm.tiles[0], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0 });
+  assert.deepEqual(farm.endDay(), { day: 4, rotted: 1, dryRotted: 0 });
+  assert.deepEqual(farm.tiles[0], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
 });
 
 test('ready crops stop growing and remain harvestable through the second ready day', () => {
@@ -182,9 +193,9 @@ test('snapshot sanitizes invalid crop and tile combinations', () => {
   tiles[1] = { state: 'tilled', crop: 'pumpkin', growth: 3, watered: true, ready: true };
   tiles[2] = null;
   const farm = FarmModel.fromSnapshot({ version: 1, tiles });
-  assert.deepEqual(farm.tiles[0], { state: 'grass', crop: null, growth: 0, watered: false, ready: false, readyDays: 0 });
-  assert.deepEqual(farm.tiles[1], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0 });
-  assert.deepEqual(farm.tiles[2], { state: 'grass', crop: null, growth: 0, watered: false, ready: false, readyDays: 0 });
+  assert.deepEqual(farm.tiles[0], { state: 'grass', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
+  assert.deepEqual(farm.tiles[1], { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
+  assert.deepEqual(farm.tiles[2], { state: 'grass', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
 });
 
 test('unknown save versions and wrong tile counts fall back safely', () => {
@@ -223,11 +234,11 @@ test('energy upgrades cost 80 coins and permanently raise the daily maximum', ()
   assert.deepEqual(farm.snapshot(), capped);
 });
 
-test('legacy version-one saves receive safe energy and harvest-age defaults', () => {
+test('legacy version-one saves receive safe energy, harvest-age, and dry-age defaults', () => {
   const tiles = Array.from({ length: 30 }, () => ({ state: 'grass' }));
   tiles[0] = { state: 'planted', crop: 'turnip', growth: 1, watered: false, ready: true };
   const restored = FarmModel.fromSnapshot({ version: 1, day: 9, energy: 12, tiles });
-  assert.deepEqual([restored.maxEnergy, restored.energy, restored.tiles[0].ready, restored.tiles[0].readyDays], [14, 12, true, 0]);
+  assert.deepEqual([restored.maxEnergy, restored.energy, restored.tiles[0].ready, restored.tiles[0].readyDays, restored.tiles[0].dryDays], [14, 12, true, 0, 0]);
 });
 
 test('repeatable turnip loop can fund continued upgrades without bankruptcy', () => {

@@ -10,7 +10,7 @@ export const ORDERS = Object.freeze([
   Object.freeze({ crop: 'pumpkin', count: 2, reward: 150 })
 ]);
 
-const freshTile = () => ({ state: 'grass', crop: null, growth: 0, watered: false, ready: false, readyDays: 0 });
+const freshTile = () => ({ state: 'grass', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
 const boundedInt = (value, fallback, min, max) => Number.isFinite(value)
   ? Math.max(min, Math.min(max, Math.floor(value)))
   : fallback;
@@ -46,6 +46,7 @@ export class FarmModel {
       tile.growth = 0;
       tile.ready = false;
       tile.readyDays = 0;
+      tile.dryDays = 0;
       tile.watered = context.rainy === true;
       this.seeds[crop] -= 1;
     } else if (tool === 'water') {
@@ -55,7 +56,7 @@ export class FarmModel {
     } else if (tool === 'harvest') {
       if (tile.state !== 'planted' || !tile.ready) return { ok: false, reason: 'Not ready to harvest' };
       this.produce[tile.crop] += 1;
-      Object.assign(tile, { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0 });
+      Object.assign(tile, { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
     } else {
       return { ok: false, reason: 'Choose a tool' };
     }
@@ -66,24 +67,34 @@ export class FarmModel {
 
   endDay() {
     let rotted = 0;
+    let dryRotted = 0;
     for (const tile of this.tiles) {
       if (tile.state === 'planted' && tile.ready) {
         tile.readyDays += 1;
         if (tile.readyDays >= 2) {
-          Object.assign(tile, { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0 });
+          Object.assign(tile, { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
           rotted += 1;
           continue;
         }
       } else if (tile.state === 'planted' && tile.watered) {
         tile.growth += 1;
+        tile.dryDays = 0;
         tile.ready = tile.growth >= CROPS[tile.crop].growDays;
         if (tile.ready) tile.readyDays = 0;
+      } else if (tile.state === 'planted') {
+        tile.dryDays += 1;
+        if (tile.dryDays >= 2) {
+          Object.assign(tile, { state: 'tilled', crop: null, growth: 0, watered: false, ready: false, readyDays: 0, dryDays: 0 });
+          rotted += 1;
+          dryRotted += 1;
+          continue;
+        }
       }
       tile.watered = false;
     }
     this.day += 1;
     this.energy = this.maxEnergy;
-    return { day: this.day, rotted };
+    return { day: this.day, rotted, dryRotted };
   }
 
   buySeeds(crop, amount = 1) {
@@ -178,6 +189,7 @@ export class FarmModel {
           tile.watered = source.watered === true;
           tile.ready = tile.growth >= CROPS[crop].growDays;
           tile.readyDays = tile.ready ? boundedInt(source.readyDays, 0, 0, 1) : 0;
+          tile.dryDays = tile.ready ? 0 : boundedInt(source.dryDays, 0, 0, 1);
         }
         return tile;
       });

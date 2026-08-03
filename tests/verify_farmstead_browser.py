@@ -21,6 +21,20 @@ def click_tile(page, index):
     page.mouse.click(point["x"], point["y"])
 
 
+def covered_tile_centers(page):
+    return page.evaluate("""() => {
+      const canvas=document.getElementById('game'), rect=canvas.getBoundingClientRect(), covered=[];
+      for (let index=0; index<30; index++) {
+        let tile;
+        __game.scene.traverse(node => { if (node.userData?.tileIndex === index) tile=node; });
+        const point=tile.getWorldPosition(tile.position.clone()).project(__game.camera);
+        const x=rect.left+(point.x+1)*rect.width/2, y=rect.top+(-point.y+1)*rect.height/2;
+        if (document.elementFromPoint(x,y) !== canvas) covered.push(index);
+      }
+      return covered;
+    }""")
+
+
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True, args=["--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
     page = browser.new_page(viewport={"width": 1280, "height": 900}, device_scale_factor=1)
@@ -36,6 +50,12 @@ with sync_playwright() as p:
     assert "Lilita One" in page.evaluate("getComputedStyle(document.body).fontFamily")
     assert page.evaluate("__game.assets.treeCount") >= 30
     assert page.evaluate("[__game.windmillBlades,__game.renderer.getContext().getContextAttributes().antialias]") == [4, True]
+    weather_art = page.evaluate("""() => {
+      const rain=__game.scene.getObjectByName('rain-visuals');
+      const hat=__game.scene.getObjectByName('straw-hat');
+      return {rainCount:rain?.count,rainVisible:rain?.visible,hatParent:hat?.parent?.name};
+    }""")
+    assert weather_art == {"rainCount": 96, "rainVisible": False, "hatParent": "head"}, weather_art
     voxel_contract = page.evaluate("""() => {
       const grass=__game.scene.getObjectByName('voxel-grass-grid');
       const path=__game.scene.getObjectByName('voxel-path-blocks');
@@ -45,7 +65,7 @@ with sync_playwright() as p:
         grassInstanced:grass?.children.every(m=>m.isInstancedMesh),pathInstanced:path?.isInstancedMesh,pondInstanced:pond?.isInstancedMesh};
     }""")
     assert voxel_contract == {
-        "grass": 1760, "grassLayers": 4, "path": 21, "pond": 16,
+        "grass": 1760, "grassLayers": 4, "path": 14, "pond": 16,
         "grassInstanced": True, "pathInstanced": True, "pondInstanced": True,
     }, voxel_contract
     rendering = page.evaluate("""() => ({
@@ -63,10 +83,21 @@ with sync_playwright() as p:
       };
     }""")
     assert overlap == {"buildingPath": False, "fieldPath": False, "houseField": False}, (overlap, rendering)
+    clearance = page.evaluate("""() => ({
+      pathRoutes: __game.layout.paths.length,
+      marketRemoved: !('market' in __game.layout.buildings),
+      houseToField: __game.layout.field.minZ - __game.layout.buildings.farmhouse.maxZ,
+      pathToField: __game.layout.field.minZ - Math.max(...__game.layout.paths.map(path => path.maxZ))
+    })""")
+    assert clearance["pathRoutes"] == 1, clearance
+    assert clearance["marketRemoved"] is True, clearance
+    assert clearance["houseToField"] >= 1.5, clearance
+    assert clearance["pathToField"] >= 1.5, clearance
 
     page.locator("#guide-open").click()
     assert page.locator("#field-guide").is_visible()
     guide_text = page.locator("#field-guide").inner_text()
+    assert "RAIN: AUTO-WATERS CROPS + NEW SEEDS" in page.locator("#quest-card").inner_text()
     for explanation in ["START WITH 6 TURNIP SEEDS", "TURNIP · 1 DAY · SELLS 18", "RAIN WATERS", "MATURE CROPS ROT", "80 coins"]:
         assert explanation in guide_text, guide_text
     page.locator("#guide-close").click()
@@ -76,6 +107,7 @@ with sync_playwright() as p:
     assert page.locator("#tutorial").is_visible()
     assert "HOE" in page.locator("#tutorial").inner_text()
     page.locator("#tutorial-skip").click()
+    assert covered_tile_centers(page) == []
 
     # The visible Harvest Board control must work through an actual pointer click.
     page.evaluate("__game.farm.produce.turnip=3; __game.refresh()")
@@ -124,12 +156,25 @@ with sync_playwright() as p:
 
     # Planting through ordinary controls on a rainy day must auto-water the seed.
     page.evaluate("__game.farm.day=3; __game.refresh()")
+    assert page.evaluate("__game.scene.getObjectByName('rain-visuals').visible") is True
     click_tile(page, 26)
     page.wait_for_function("__game.farm.tiles[26].state === 'tilled'")
     page.locator("#tool-turnip").click()
     click_tile(page, 26)
     page.wait_for_function("__game.farm.tiles[26].crop === 'turnip'")
     assert page.evaluate("__game.farm.tiles[26].watered") is True
+    page.locator("#pause-toggle").click()
+    page.locator("#pause .menu-return").click()
+    page.locator("#new-game").click()
+    page.locator("#tutorial-skip").click()
+
+    # Rot must be prominent and Harvest must show ready crops, not a static keyboard shortcut.
+    page.evaluate("""() => { Object.assign(__game.farm.tiles[0], {state:'planted',crop:'turnip',growth:1,watered:false,ready:true,readyDays:1,dryDays:0}); __game.refresh(); }""")
+    assert page.locator("#ready-count").inner_text() == "1"
+    page.evaluate("__game.endDay()")
+    assert "1 CROP ROTTED" in page.locator("#night-transition").inner_text()
+    assert page.locator("#ready-count").inner_text() == "0"
+    page.wait_for_function("!__game.transitioning")
     page.locator("#pause-toggle").click()
     page.locator("#pause .menu-return").click()
     page.locator("#new-game").click()
@@ -152,6 +197,11 @@ with sync_playwright() as p:
     assert (animation_after["x"], animation_after["z"]) != (animation_before["x"], animation_before["z"])
     assert animation_after["q"] != animation_before["q"], (animation_before, animation_after)
     page.wait_for_function("__game.farm.tiles[0].state === 'tilled'")
+    hat_samples = []
+    for _ in range(6):
+        hat_samples.append(page.evaluate("""() => { const root=__game.scene.getObjectByName('farmer-avatar'),hat=__game.scene.getObjectByName('straw-hat'),point=hat.getWorldPosition(hat.position.clone()); return root.worldToLocal(point).toArray(); }"""))
+        page.wait_for_timeout(60)
+    assert len({tuple(round(value, 3) for value in sample) for sample in hat_samples}) > 1, hat_samples
     assert page.evaluate("__game.farm.energy") == 13
 
     page.locator("#tool-turnip").click()
@@ -196,6 +246,7 @@ with sync_playwright() as p:
     page.wait_for_function("__game.ready && __game.assets.farmer && __game.assets.farmhouse && __game.assets.scenery")
     page.locator("#start").click()
     assert page.evaluate("__game.state") == "PLAYING"
+    assert covered_tile_centers(page) == []
     click_tile(page, 14)
     page.wait_for_function("__game.farm.tiles[14].state === 'tilled'", timeout=5000)
     page.locator("#guide-open").click()

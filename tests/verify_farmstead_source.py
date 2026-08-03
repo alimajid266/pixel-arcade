@@ -29,6 +29,7 @@ for path in required:
 
 html = (GAME / "index.html").read_text()
 source = (GAME / "game.js").read_text()
+core = (GAME / "farm-core.mjs").read_text()
 home = (ROOT / "index.html").read_text()
 licenses = (GAME / "ASSET-LICENSES.md").read_text()
 vercel_ignore = (ROOT / ".vercelignore").read_text()
@@ -37,7 +38,7 @@ for control in [
     "start", "pause-toggle", "resume", "end-day", "sell-all", "deliver-order",
     "tool-hoe", "tool-water", "tool-turnip", "tool-carrot", "tool-pumpkin", "tool-harvest",
     "guide-open", "field-guide", "tutorial", "tutorial-next",
-    "buy-energy", "night-transition",
+    "buy-energy", "night-transition", "night-transition-copy", "ready-count",
 ]:
     assert f'id="{control}"' in html, control
 
@@ -72,8 +73,11 @@ assert "RESTORE THE MILL" not in html
 assert "checkCompletion" not in source
 assert "START WITH 6 TURNIP SEEDS" in html
 assert "RAIN WATERS EVERY PLANTED CROP" in html
+assert "UNWATERED CROPS DO NOT GROW" in html
 assert "TURNIP · 1 DAY · SELLS 18" in html
 assert "MATURE CROPS ROT" in html
+for marker in ["rain-visuals", "straw-hat", "dryDays", "ready-count", "night-transition-copy"]:
+    assert marker in source or marker in core or marker in html, marker
 
 expected_hashes = {
     "character-a.glb": "8ee5dae167ec589863f6bba222467eb90ace8be357a4c5abfcab289290181616",

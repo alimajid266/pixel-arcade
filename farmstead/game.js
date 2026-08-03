@@ -40,7 +40,8 @@ scene.fog = new THREE.Fog(0x65d9ff, 42, 68);
 const camera = new THREE.OrthographicCamera(-12, 12, 8, -8, 0.1, 100);
 camera.position.set(18, 21, 22);
 camera.lookAt(0, 0, 0);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x245080, 0.9));
+const skyLight = new THREE.HemisphereLight(0xffffff, 0x245080, 0.9);
+scene.add(skyLight);
 const sun = new THREE.DirectionalLight(0xffe1a8, 1.18);
 sun.position.set(-8, 18, 10);
 scene.add(sun);
@@ -71,6 +72,19 @@ const geometries = {
 
 const world = new THREE.Group();
 scene.add(world);
+const rainState = Array.from({ length: 96 }, (_, index) => ({
+  x: ((index * 47) % 260) / 10 - 13,
+  y: 2 + ((index * 31) % 100) / 10,
+  z: ((index * 73) % 220) / 10 - 11,
+}));
+const rainVisuals = new THREE.InstancedMesh(
+  new THREE.BoxGeometry(0.045, 0.72, 0.045),
+  new THREE.MeshBasicMaterial({ color: 0x9eeeff, transparent: true, opacity: 0.78, depthWrite: false }),
+  rainState.length
+);
+rainVisuals.name = 'rain-visuals';
+rainVisuals.visible = false;
+scene.add(rainVisuals);
 const ground = new THREE.Mesh(new THREE.BoxGeometry(60, 0.8, 50), new THREE.MeshLambertMaterial({ color: 0x258c4d }));
 ground.position.y = -0.62;
 world.add(ground);
@@ -107,8 +121,7 @@ function box(w, h, d, material, x, y, z) {
 }
 
 const pathCells = [];
-for (let x = -4.5; x <= 6.5; x++) pathCells.push([x, -3.5]);
-for (let z = -3; z <= 5; z++) pathCells.push([6.65, z]);
+for (let index = 0; index < 14; index++) pathCells.push([-5.8 + index * 0.96, -4.0]);
 const pathBlocks = new THREE.InstancedMesh(new THREE.BoxGeometry(1.04, 0.22, 1.04), mats.path, pathCells.length);
 pathBlocks.name = 'voxel-path-blocks';
 pathCells.forEach(([x, z], index) => {
@@ -119,13 +132,11 @@ pathBlocks.instanceMatrix.needsUpdate = true;
 world.add(pathBlocks);
 const layout = Object.freeze({
   buildings: Object.freeze({
-    farmhouse: Object.freeze({ minX: -9.5, maxX: -5.25, minZ: -6.6, maxZ: -2.2 }),
+    farmhouse: Object.freeze({ minX: -10.65, maxX: -6.4, minZ: -8.4, maxZ: -4.0 }),
     windmill: Object.freeze({ minX: 7.25, maxX: 10.45, minZ: -4.2, maxZ: -0.2 }),
-    market: Object.freeze({ minX: 7.4, maxX: 10.5, minZ: 4.0, maxZ: 7.0 }),
   }),
   paths: Object.freeze([
-    Object.freeze({ minX: -5.02, maxX: 7.02, minZ: -4.02, maxZ: -2.98 }),
-    Object.freeze({ minX: 6.13, maxX: 7.17, minZ: -3.52, maxZ: 5.52 }),
+    Object.freeze({ minX: -6.32, maxX: 7.2, minZ: -4.52, maxZ: -3.48 }),
   ]),
   field: Object.freeze({ minX: -3.09, maxX: 6.09, minZ: -1.91, maxZ: 5.71 }),
 });
@@ -265,6 +276,7 @@ const hatBrimGeometry = new THREE.BoxGeometry(0.82, 0.09, 0.72);
 const hatCrownGeometry = new THREE.BoxGeometry(0.48, 0.25, 0.46);
 hatCrownGeometry.translate(0, 0.16, 0);
 const strawHat = new THREE.Mesh(mergeGeometries([hatBrimGeometry, hatCrownGeometry]), new THREE.MeshLambertMaterial({ color: 0xffc83d, flatShading: true }));
+strawHat.name = 'straw-hat';
 hatBrimGeometry.dispose();
 hatCrownGeometry.dispose();
 strawHat.position.y = 1.67;
@@ -346,18 +358,20 @@ function flattenStaticModel(root) {
 
 async function loadVoxelFarm() {
   try {
-    const [character, houseArt, fenceArt, treeLargeArt, treeSmallArt, pathStoneArt, planterArt] = await Promise.all([
+    const [character, houseArt, fenceArt, treeLargeArt, treeSmallArt, planterArt] = await Promise.all([
       loader.loadAsync(voxel('character-a')),
       loader.loadAsync(voxel('building-type-n')),
       loader.loadAsync(voxel('fence-1x4')),
       loader.loadAsync(voxel('tree-large')),
       loader.loadAsync(voxel('tree-small')),
-      loader.loadAsync(voxel('path-stones-long')),
       loader.loadAsync(voxel('planter')),
     ]);
 
     farmerModel = normalizedModel(voxelMaterials(character.scene), 1.82);
     farmerRoot.add(farmerModel);
+    farmerRoot.updateMatrixWorld(true);
+    const farmerHead = farmerModel.getObjectByName('head');
+    if (farmerHead) farmerHead.attach(strawHat);
     voxelLegLeft = farmerModel.getObjectByName('leg-left');
     voxelLegRight = farmerModel.getObjectByName('leg-right');
     voxelArmLeft = farmerModel.getObjectByName('arm-left');
@@ -385,7 +399,7 @@ async function loadVoxelFarm() {
     assets.farmer = true;
 
     const house = normalizedModel(voxelMaterials(houseArt.scene), 4.25);
-    house.position.set(-7.35, 0.02, -4.4);
+    house.position.set(-8.5, 0.02, -6.2);
     house.rotation.y = Math.PI * 0.12;
     staticArt.add(house);
     assets.farmhouse = true;
@@ -395,9 +409,7 @@ async function loadVoxelFarm() {
       [treeLargeArt.scene, 4.2, -12.1, 0.5, 0.5], [treeSmallArt.scene, 2.7, -12.8, 4.2, 0.1],
       [treeLargeArt.scene, 4.0, -12.2, 9.0, -0.4], [treeSmallArt.scene, 2.8, 12.4, -7.3, 0.25],
       [treeLargeArt.scene, 4.1, 12.5, -3.5, -0.2], [treeSmallArt.scene, 2.7, 12.1, 1.1, 0.45],
-      [treeLargeArt.scene, 3.9, 12.6, 6.7, -0.35], [pathStoneArt.scene, 0.16, -4.95, -2.0, Math.PI / 2],
-      [pathStoneArt.scene, 0.16, 6.1, 6.0, 0], [planterArt.scene, 0.65, -5.35, 0.9, 0],
-      [planterArt.scene, 0.72, 7.25, 5.8, Math.PI / 2],
+      [treeLargeArt.scene, 3.9, 12.6, 6.7, -0.35], [planterArt.scene, 0.65, -5.35, 0.9, 0],
       [treeLargeArt.scene, 3.7, -8.7, -8.9, 0.15], [treeSmallArt.scene, 2.6, -5.7, -9.5, -0.2],
       [treeLargeArt.scene, 3.9, -2.6, -9.8, 0.35], [treeSmallArt.scene, 2.7, 1.0, -10.2, -0.4],
       [treeLargeArt.scene, 4.0, 4.8, -9.7, 0.1], [treeSmallArt.scene, 2.8, 8.7, -9.1, -0.25],
@@ -415,23 +427,6 @@ async function loadVoxelFarm() {
     for (const x of [-9.0, -7.6, -6.2]) placeModel(fenceArt.scene, 0.62, x, 2.0, 0);
     for (const z of [-1.5, 0.0]) placeModel(fenceArt.scene, 0.62, -9.7, z, Math.PI / 2);
 
-    const market = new THREE.Group();
-    market.position.set(8.9, 0, 5.4);
-    const marketCounter = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.0, 1.35), mats.wood);
-    marketCounter.position.y = 0.5;
-    const marketCanopy = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.45, 2.2), mats.red);
-    marketCanopy.position.y = 2.35;
-    const marketPostGeometry = new THREE.BoxGeometry(0.18, 1.9, 0.18);
-    const marketPosts = new THREE.InstancedMesh(marketPostGeometry, mats.cream, 4);
-    let postIndex = 0;
-    for (const x of [-1.2, 1.2]) for (const z of [-0.65, 0.65]) {
-      voxelMatrix.makeTranslation(x, 1.42, z);
-      marketPosts.setMatrixAt(postIndex++, voxelMatrix);
-    }
-    marketPosts.instanceMatrix.needsUpdate = true;
-    market.add(marketPosts);
-    market.add(marketCounter, marketCanopy);
-    world.add(market);
 
     const flattenedScenery = flattenStaticModel(staticArt);
     world.remove(staticArt);
@@ -470,6 +465,7 @@ function totalProduce() {
 }
 
 function updateHud() {
+  const rainy = weatherForDay(farm.day) === 'RAIN';
   ui.day.textContent = farm.day;
   ui.weather.textContent = weatherForDay(farm.day);
   ui.coins.textContent = farm.coins;
@@ -478,6 +474,11 @@ function updateHud() {
   ui['turnip-count'].textContent = farm.seeds.turnip;
   ui['carrot-count'].textContent = farm.seeds.carrot;
   ui['pumpkin-count'].textContent = farm.seeds.pumpkin;
+  ui['ready-count'].textContent = farm.tiles.filter(tile => tile.ready).length;
+  rainVisuals.visible = rainy;
+  scene.background.set(rainy ? 0x678fb5 : 0x8fdcff);
+  skyLight.intensity = rainy ? 0.68 : 0.9;
+  sun.intensity = rainy ? 0.72 : 1.18;
   const order = farm.order;
   ui['order-text'].textContent = `${order.count} ${CROPS[order.crop].name.toLowerCase()}s → ${order.reward} coins`;
   ui['buy-turnip'].textContent = 'TURNIP SEED · 8';
@@ -611,7 +612,6 @@ function resetInteractionState() {
 function endDay() {
   if (state !== 'PLAYING' || transitioning) return { ok: false };
   transitioning = true;
-  ui['night-transition'].classList.add('show');
   queuedIndex = null;
   queuedTool = null;
   setAnimation('idle');
@@ -621,11 +621,16 @@ function endDay() {
   save();
   updateHud();
   sound('coin');
-  const rotCopy = result.rotted ? ` ${result.rotted} mature crop${result.rotted === 1 ? '' : 's'} rotted.` : '';
-  toast(`Day ${before} complete. Day ${farm.day} is ${weatherForDay(farm.day).toLowerCase()}.${rotCopy}`, true);
+  const weatherCopy = `DAY ${farm.day} IS ${weatherForDay(farm.day)}.`;
+  const rotCopy = result.rotted
+    ? `${result.rotted} CROP${result.rotted === 1 ? '' : 'S'} ROTTED${result.dryRotted ? ` · ${result.dryRotted} LEFT DRY FOR 2 DAYS` : ' · HARVEST WINDOW EXPIRED'}`
+    : weatherCopy;
+  ui['night-transition-copy'].textContent = rotCopy;
+  ui['night-transition'].classList.add('show');
   setTimeout(() => {
     ui['night-transition'].classList.remove('show');
     transitioning = false;
+    toast(result.rotted ? `ROT: ${result.rotted} crop${result.rotted === 1 ? '' : 's'} returned to tilled soil.` : `Day ${before} complete. ${weatherCopy}`, result.rotted === 0);
     updateDebug();
   }, 900);
   return { ok: true, ...result };
@@ -779,6 +784,17 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   if (state === 'PLAYING') {
+    if (rainVisuals.visible) {
+      for (let index = 0; index < rainState.length; index++) {
+        const drop = rainState[index];
+        drop.y -= dt * 10.5;
+        if (drop.y < 0.35) drop.y += 11.5;
+        voxelMatrix.makeRotationZ(-0.16);
+        voxelMatrix.setPosition(drop.x, drop.y, drop.z);
+        rainVisuals.setMatrixAt(index, voxelMatrix);
+      }
+      rainVisuals.instanceMatrix.needsUpdate = true;
+    }
     if (mixer) mixer.update(dt);
     if (queuedIndex !== null) {
       const destination = tileGroups[queuedIndex].position;
