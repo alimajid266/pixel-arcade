@@ -31,7 +31,20 @@ try:
  assert d.execute_script("return [__game.save.coins,__game.character,__game.biome,__errors.slice()]")==[0,'BOUNCE','wetlands',[]]
  daily=d.execute_script("return [__game.dailySeed(),__game.dailySeed()]");assert daily[0]==daily[1]
  d.find_element('id','daily-toggle').click();assert d.execute_script("return __game.dailyMode") is True
- d.find_element('id','start').click();daily_run=d.execute_script("""for(let row=1;row<=3;row++){__game.debug.clearBlockers(row);for(const v of __game.vehicles){v.speed=0;v.x=99;v.mesh.position.x=99}__game.move('forward');__game.debug.advance(.25)}return [__game.score,__game.save.records.daily[new Date().toISOString().slice(0,10)]];""");assert daily_run==[3,3],daily_run
+ d.find_element('id','start').click();daily_run=d.execute_script("""
+ for(let row=1;row<=3;row++){
+   __game.debug.clearBlockers(__game.player.row);__game.debug.clearBlockers(row);
+   const lane=__game.lanes.find(l=>l.row===row);
+   if(lane?.type==='water'&&!lane.bridges.has(__game.player.x)){
+     const target=[...lane.bridges].sort((a,b)=>Math.abs(a-__game.player.x)-Math.abs(b-__game.player.x))[0];
+     while(__game.player.x<target){__game.move('right');__game.debug.advance(.25)}
+     while(__game.player.x>target){__game.move('left');__game.debug.advance(.25)}
+   }
+   for(const v of __game.vehicles){v.speed=0;v.x=99;v.mesh.position.x=99}
+   __game.move('forward');__game.debug.advance(.25)
+ }
+ return [__game.score,__game.save.records.daily[new Date().toISOString().slice(0,10)]];
+ """);assert daily_run==[3,3],daily_run
  assert d.execute_script("return __errors.slice()")==[]
  print('ROAD HOP EXPANSION RUNTIME PASS',economy,daily_run)
 finally:d.quit()

@@ -19,6 +19,35 @@ try:
     assert mobile[2] <= mobile[0] and mobile[3:5] == mobile[0:2], mobile
     assert mobile[5] >= mobile[3] and mobile[6] >= mobile[4] and mobile[7] == [], mobile
 
+    haunted_mobile = d.execute_script("""
+      __game.setBiome('haunted');__game.start();
+      const props=[];__game.world.traverse(o=>{
+        if(['haunted-jack-o-lantern','haunted-path-lantern','haunted-candle-cluster','haunted-bat'].includes(o.name)){
+          const p=o.getWorldPosition(o.position.clone());props.push([o.name,p.x,p.z]);
+        }
+      });
+      const blocked=[...new Set(__game.lanes.flatMap(l=>[...l.blockers]))];
+      return [props,blocked,__game.renderer.getPixelRatio(),getComputedStyle(document.body).fontFamily];
+    """)
+    assert {p[0] for p in haunted_mobile[0]} == {
+        'haunted-jack-o-lantern','haunted-path-lantern','haunted-candle-cluster','haunted-bat'
+    }, haunted_mobile
+    assert any(abs(p[1]) <= 4 for p in haunted_mobile[0]), haunted_mobile
+    assert 3 in haunted_mobile[1] or -3 in haunted_mobile[1], haunted_mobile
+    assert haunted_mobile[2] <= 1.5 and 'Road Hop Arcade' in haunted_mobile[3], haunted_mobile
+
+    prop_footprints=d.execute_script("""
+      const failures=[];let checked=0;
+      for(const lane of __game.lanes.filter(l=>l.type==='grass'&&l.group.getObjectByName('haunted-grave-cluster'))){
+        const cluster=lane.group.getObjectByName('haunted-grave-cluster');let min=Infinity,max=-Infinity;
+        cluster.updateWorldMatrix(true,true);cluster.traverse(mesh=>{if(!mesh.geometry)return;mesh.geometry.computeBoundingBox();const box=mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld);min=Math.min(min,box.min.x);max=Math.max(max,box.max.x)});
+        for(let cell=Math.ceil(min);cell<=Math.floor(max);cell++){checked++;if(!lane.blockers.has(cell))failures.push([lane.row,cell,min,max,[...lane.blockers]])}
+      }
+      return {checked,failures};
+    """)
+    assert prop_footprints['checked'] >= 2, prop_footprints
+    assert prop_footprints['failures'] == [], prop_footprints
+
     cancelled=d.execute_script("""
       __game.start();const c=document.getElementById('game');
       c.dispatchEvent(new PointerEvent('pointerdown',{pointerId:7,clientX:190,clientY:500,bubbles:true}));

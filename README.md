@@ -74,9 +74,11 @@ Road Hop is a lane-crossing game rendered as a real low-poly 3D scene. The playe
 
 It includes:
 
-- orthographic WebGL rendering, fog, lightweight unshadowed lighting, and procedural geometry;
-- procedurally generated grass and road lanes;
-- traffic with varied colors, directions, spacing, and increasing speed;
+- orthographic WebGL rendering, fog, lightweight unshadowed lighting, antialiased edges, and a device-pixel-ratio cap of `1.5×`;
+- procedurally generated grass, road, and Rainy Wetlands water lanes with deterministic meandering three-cell bridges;
+- traffic with varied colors, directions, spacing, and increasing speed; vehicles wrap at ±20 world units outside the visible road frame rather than popping at the camera edge;
+- a locally vendored Lilita One display face under the SIL Open Font License 1.1;
+- a brighter Halloween Haunt with carved jack-o-lanterns, warm path lanterns, candle clusters, bats, graves, dead trees, ghosts, and a moon;
 - keyboard and touch-swipe controls;
 - pause, game-over, instant retry, synthesized hop/crash effects, and a local best score;
 - bounded lane cleanup so endless play does not retain the entire traversed world.
@@ -297,8 +299,10 @@ The games preserve fixed logical worlds while scaling their displayed Canvas:
 |---|---:|
 | Flappy Canvas | `400 × 600` |
 | Zombie Defense | `800 × 650` |
-| Road Hop | viewport-sized WebGL buffer, capped at `1×` device pixel ratio |
+| Road Hop | viewport-sized antialiased WebGL buffer, capped at `1.5×` device pixel ratio |
 | Harvest Hollow | orthographic WebGL buffer at full CSS viewport dimensions, capped at `1×` pixel ratio |
+
+Road Hop uses exact CSS-pixel renderer sizing up to a centered `2:1` gameplay canvas; wider displays receive intentional side gutters so traffic remains outside the visible wrap boundary. The antialiased framebuffer is capped at `1.5×` device pixel ratio, while controls and overlays continue to use the full viewport.
 
 Zombie Defense uses a `20 × 12` battlefield grid with `40px` logical cells. Its top `480px` is the build grid, `500px` is the playable world area, and the remaining space is the HUD.
 
